@@ -1,6 +1,8 @@
 <div class="flex h-full w-full flex-1 flex-col gap-6">
     {{-- Player: reacts to `playing` state, so it always stops when hidden (close, back, navigate) --}}
+    {{-- Negative margins cancel the padded `flux:main` container so the video is edge-to-edge. --}}
     <div
+        class="-mx-6 -mt-6 lg:-mx-8 lg:-mt-8"
         wire:key="player"
         x-data="{
             theater: false,
@@ -32,62 +34,62 @@
         x-show="playing"
         x-cloak
     >
-        <div class="w-full">
-            <div class="overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-700">
-                {{-- Full-width black stage with a set height; video fills it proportionally --}}
-                <div class="flex w-full items-center justify-center bg-black transition-all" :class="theater ? 'h-[85vh]' : 'h-[70vh]'">
-                    <video
-                        x-ref="video"
-                        :src="url"
-                        wire:ignore
-                        class="size-full object-contain"
-                        controls
-                        playsinline
-                        preload="metadata"
-                    ></video>
-                </div>
+        {{-- Full-width black stage with a set height; video fills it proportionally --}}
+        <div class="flex w-full items-center justify-center bg-black transition-all duration-300" :class="theater ? 'h-[85vh]' : 'h-[70vh]'">
+            <video
+                x-ref="video"
+                :src="url"
+                wire:ignore
+                class="size-full object-contain"
+                controls
+                playsinline
+                preload="metadata"
+            ></video>
+        </div>
 
-                <div class="flex items-center justify-between gap-2 bg-white px-4 py-3 dark:bg-neutral-900">
-                    <flux:heading size="sm" class="truncate">{{ $playing ? basename($playing) : '' }}</flux:heading>
-                    <div class="flex items-center gap-1">
-                        <flux:button size="sm" variant="ghost" icon="rectangle-group" x-on:click="theater = ! theater">
-                            <span class="hidden sm:inline">{{ __('Theater') }}</span>
-                            <flux:badge size="sm" class="ml-1">T</flux:badge>
-                        </flux:button>
-                        <flux:button size="sm" variant="ghost" icon="arrows-pointing-out" x-on:click="toggleFullscreen()">
-                            <span class="hidden sm:inline">{{ __('Fullscreen') }}</span>
-                            <flux:badge size="sm" class="ml-1">F</flux:badge>
-                        </flux:button>
-                        <flux:button size="sm" variant="ghost" icon="x-mark" x-on:click="close()" />
-                    </div>
-                </div>
+        {{-- Below the video: now-playing title + controls (re-padded to align with page content) --}}
+        <div class="flex items-center justify-between gap-3 px-6 py-3 lg:px-8">
+            <div class="flex min-w-0 items-center gap-2.5">
+                <flux:heading class="truncate font-semibold tabular-nums text-neutral-100">{{ $playing ? basename($playing) : '' }}</flux:heading>
+                <span class="hidden shrink-0 text-xs text-neutral-500 sm:block">{{ $playing ? str($playing)->afterLast('.')->upper() : '' }}</span>
+            </div>
+            <div class="flex shrink-0 items-center gap-1">
+                <flux:button size="sm" variant="ghost" icon="rectangle-group" x-on:click="theater = ! theater">
+                    <span class="hidden sm:inline">{{ __('Theater') }}</span>
+                    <flux:badge size="sm" class="ml-1">T</flux:badge>
+                </flux:button>
+                <flux:button size="sm" variant="ghost" icon="arrows-pointing-out" x-on:click="toggleFullscreen()">
+                    <span class="hidden sm:inline">{{ __('Fullscreen') }}</span>
+                    <flux:badge size="sm" class="ml-1">F</flux:badge>
+                </flux:button>
+                <flux:button size="sm" variant="ghost" icon="x-mark" x-on:click="close()" />
             </div>
         </div>
     </div>
 
     {{-- Finder-style window --}}
-    <div class="flex flex-1 flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm dark:border-neutral-700 dark:bg-neutral-900">
+    <div class="flex flex-1 flex-col overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900 shadow-lg">
         {{-- Toolbar --}}
-        <div class="flex items-center gap-2 border-b border-neutral-200 bg-neutral-50 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-800/60">
-            <div class="flex items-center gap-1">
-                <flux:button
-                    size="sm"
-                    variant="ghost"
-                    icon="chevron-left"
-                    :disabled="$this->parent === null"
-                    wire:click="open('{{ $this->parent ?? '' }}')"
-                />
-            </div>
+        <div class="flex items-center gap-2 border-b border-neutral-800 bg-neutral-900/70 px-3 py-2.5 backdrop-blur">
+            <button
+                type="button"
+                @disabled($this->parent === null)
+                wire:click="open('{{ $this->parent ?? '' }}')"
+                class="flex size-8 shrink-0 items-center justify-center rounded-md text-neutral-400 transition hover:bg-white/5 hover:text-neutral-100 disabled:pointer-events-none disabled:opacity-30"
+                aria-label="{{ __('Back') }}"
+            >
+                <flux:icon.chevron-left class="size-4" />
+            </button>
 
             {{-- Path breadcrumb --}}
-            <div class="flex min-w-0 items-center gap-1 text-sm text-neutral-600 dark:text-neutral-300">
-                <button type="button" wire:click="open('')" class="inline-flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 font-medium hover:bg-neutral-200/70 dark:hover:bg-neutral-700">
-                    <flux:icon.film class="size-4 text-accent" />
+            <div class="flex min-w-0 items-center gap-1 text-sm text-neutral-400">
+                <button type="button" wire:click="open('')" class="inline-flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-1 font-medium text-neutral-200 transition hover:bg-white/5">
+                    <flux:icon.film variant="solid" class="size-4 text-[#0A84FF]" />
                     {{ __('Movies') }}
                 </button>
                 @foreach ($this->breadcrumbs as $crumb)
-                    <flux:icon.chevron-right class="size-3.5 shrink-0 text-neutral-400" />
-                    <button type="button" wire:click="open('{{ $crumb['path'] }}')" class="truncate rounded px-1.5 py-0.5 hover:bg-neutral-200/70 dark:hover:bg-neutral-700">
+                    <flux:icon.chevron-right class="size-3.5 shrink-0 text-neutral-600" />
+                    <button type="button" wire:click="open('{{ $crumb['path'] }}')" class="truncate rounded-md px-1.5 py-1 transition hover:bg-white/5 hover:text-neutral-100">
                         {{ $crumb['name'] }}
                     </button>
                 @endforeach
@@ -105,28 +107,33 @@
                     accept="video/*,.mp4,.webm,.ogg,.mov"
                     class="hidden"
                 />
-                <flux:button
-                    size="sm"
-                    variant="primary"
-                    icon="arrow-up-tray"
+                <button
+                    type="button"
                     x-on:click="$refs.uploadInput.click()"
                     wire:loading.attr="disabled"
                     wire:target="uploads"
+                    class="inline-flex items-center gap-2 rounded-md bg-[#0A84FF] px-3 py-1.5 text-sm font-medium text-white transition hover:bg-[#0071e3] disabled:cursor-not-allowed disabled:opacity-60"
                 >
+                    <flux:icon.arrow-up-tray class="size-4" wire:loading.remove wire:target="uploads" />
+                    <svg wire:loading wire:target="uploads" class="size-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
+                        <path class="opacity-90" d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" stroke-width="3" stroke-linecap="round"></path>
+                    </svg>
                     <span wire:loading.remove wire:target="uploads">{{ __('Upload') }}</span>
                     <span wire:loading wire:target="uploads">{{ __('Uploading…') }}</span>
-                </flux:button>
+                </button>
             </div>
         </div>
 
         @error('uploads.*')
-            <div class="border-b border-red-200 bg-red-50 px-4 py-1.5 text-xs text-red-600 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-400">
+            <div class="flex items-center gap-2 border-b border-red-900/50 bg-red-950/40 px-4 py-2 text-xs text-red-400">
+                <flux:icon.exclamation-triangle class="size-4 shrink-0" />
                 {{ $message }}
             </div>
         @enderror
 
         {{-- List header --}}
-        <div class="grid grid-cols-[1fr_8rem_6rem_2.5rem] gap-2 border-b border-neutral-200 px-4 py-1.5 text-xs font-medium text-neutral-500 dark:border-neutral-700 dark:text-neutral-400">
+        <div class="grid grid-cols-[1fr_9rem_6rem_2.5rem] gap-3 border-b border-neutral-800 px-4 py-2 text-xs font-medium text-neutral-500">
             <span>{{ __('Name') }}</span>
             <span class="hidden sm:block">{{ __('Kind') }}</span>
             <span class="text-right">{{ __('Size') }}</span>
@@ -134,26 +141,26 @@
         </div>
 
         {{-- Rows --}}
-        <div class="flex-1 divide-y divide-neutral-100 overflow-y-auto dark:divide-neutral-800">
+        <div class="flex-1 divide-y divide-white/[0.04] overflow-y-auto">
             @foreach ($this->directories as $directory)
                 <div
                     wire:key="dir-{{ $directory['path'] }}"
-                    class="group grid grid-cols-[1fr_8rem_6rem_2.5rem] items-center gap-2 px-4 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                    class="group grid grid-cols-[1fr_9rem_6rem_2.5rem] items-center gap-3 px-4 text-sm transition-colors hover:bg-white/5"
                 >
                     <button
                         type="button"
                         wire:click="open('{{ $directory['path'] }}')"
-                        class="col-span-3 grid grid-cols-subgrid items-center gap-2 py-2 text-left"
+                        class="col-span-3 grid grid-cols-subgrid items-center gap-3 py-2 text-left"
                     >
-                        <span class="flex min-w-0 items-center gap-2">
-                            <flux:icon.folder class="size-5 shrink-0 text-sky-500" />
-                            <span class="truncate font-medium">{{ $directory['name'] }}</span>
+                        <span class="flex min-w-0 items-center gap-2.5">
+                            <flux:icon.folder variant="solid" class="size-5 shrink-0 text-[#0A84FF]" />
+                            <span class="truncate font-medium tabular-nums text-neutral-100">{{ $directory['name'] }}</span>
                         </span>
-                        <span class="hidden text-neutral-500 sm:block dark:text-neutral-400">{{ __('Folder') }}</span>
-                        <span class="text-right text-neutral-400">{{ trans_choice(':count item|:count items', $directory['count'], ['count' => $directory['count']]) }}</span>
+                        <span class="hidden text-neutral-500 sm:block">{{ __('Folder') }}</span>
+                        <span class="text-right tabular-nums text-neutral-500">{{ trans_choice(':count item|:count items', $directory['count'], ['count' => $directory['count']]) }}</span>
                     </button>
 
-                    <div class="flex justify-end opacity-0 group-hover:opacity-100 focus-within:opacity-100">
+                    <div class="flex justify-end opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
                         <flux:dropdown align="end">
                             <flux:button size="xs" variant="ghost" icon="ellipsis-vertical" aria-label="{{ __('Folder actions') }}" />
                             <flux:menu>
@@ -168,30 +175,51 @@
             @endforeach
 
             @foreach ($this->files as $file)
+                @php($isPlaying = $playing === $file['path'])
                 <div
                     wire:key="file-{{ $file['path'] }}"
                     @class([
-                        'group grid grid-cols-[1fr_8rem_6rem_2.5rem] items-center gap-2 px-4 text-sm',
-                        'bg-accent text-accent-foreground' => $playing === $file['path'],
-                        'hover:bg-neutral-100 dark:hover:bg-neutral-800' => $playing !== $file['path'],
+                        'group grid grid-cols-[1fr_9rem_6rem_2.5rem] items-center gap-3 px-4 text-sm transition-colors',
+                        'bg-[#0A84FF]' => $isPlaying,
+                        'hover:bg-white/5' => ! $isPlaying,
                     ])
                 >
                     <button
                         type="button"
                         wire:click="play('{{ $file['path'] }}')"
-                        class="col-span-3 grid grid-cols-subgrid items-center gap-2 py-2 text-left"
+                        class="col-span-3 grid grid-cols-subgrid items-center gap-3 py-2 text-left"
                     >
-                        <span class="flex min-w-0 items-center gap-2">
-                            <flux:icon.film @class(['size-5 shrink-0', 'text-accent-foreground' => $playing === $file['path'], 'text-neutral-400' => $playing !== $file['path']]) />
-                            <span class="truncate font-medium">{{ $file['name'] }}</span>
+                        <span class="flex min-w-0 items-center gap-2.5">
+                            @if ($isPlaying)
+                                <flux:icon.play variant="solid" class="size-5 shrink-0 text-white" />
+                            @else
+                                <flux:icon.film class="size-5 shrink-0 text-neutral-400" />
+                            @endif
+                            <span @class([
+                                'truncate font-medium tabular-nums',
+                                'text-white' => $isPlaying,
+                                'text-neutral-100' => ! $isPlaying,
+                            ])>{{ $file['name'] }}</span>
                         </span>
-                        <span @class(['hidden sm:block', 'text-accent-foreground/80' => $playing === $file['path'], 'text-neutral-500 dark:text-neutral-400' => $playing !== $file['path']])>{{ $file['kind'] }}</span>
-                        <span @class(['text-right', 'text-accent-foreground/80' => $playing === $file['path'], 'text-neutral-400' => $playing !== $file['path']])>{{ $file['size'] }}</span>
+                        <span @class([
+                            'hidden sm:block',
+                            'text-white/70' => $isPlaying,
+                            'text-neutral-500' => ! $isPlaying,
+                        ])>{{ $file['kind'] }}</span>
+                        <span @class([
+                            'text-right tabular-nums',
+                            'text-white/70' => $isPlaying,
+                            'text-neutral-500' => ! $isPlaying,
+                        ])>{{ $file['size'] }}</span>
                     </button>
 
-                    <div class="flex justify-end opacity-0 group-hover:opacity-100 focus-within:opacity-100">
+                    <div @class([
+                        'flex justify-end transition',
+                        'opacity-100' => $isPlaying,
+                        'opacity-0 group-hover:opacity-100 focus-within:opacity-100' => ! $isPlaying,
+                    ])>
                         <flux:dropdown align="end">
-                            <flux:button size="xs" variant="ghost" icon="ellipsis-vertical" aria-label="{{ __('File actions') }}" />
+                            <flux:button size="xs" variant="ghost" icon="ellipsis-vertical" aria-label="{{ __('File actions') }}" @class(['text-white' => $isPlaying]) />
                             <flux:menu>
                                 <flux:menu.item icon="pencil-square" wire:click="startRename('{{ $file['path'] }}')">{{ __('Rename') }}</flux:menu.item>
                                 <flux:menu.item icon="folder-arrow-down" wire:click="startMove('{{ $file['path'] }}')">{{ __('Move…') }}</flux:menu.item>
@@ -204,15 +232,16 @@
             @endforeach
 
             @if (empty($this->directories) && empty($this->files))
-                <div class="flex flex-col items-center gap-2 py-16 text-center">
-                    <flux:icon.film class="size-8 text-neutral-300 dark:text-neutral-600" />
-                    <flux:text>{{ __('This folder is empty.') }}</flux:text>
+                <div class="flex flex-col items-center gap-3 py-20 text-center">
+                    <flux:icon.film class="size-10 text-neutral-700" />
+                    <flux:heading class="text-base font-medium text-neutral-300">{{ __('This folder is empty') }}</flux:heading>
+                    <flux:text class="text-neutral-500">{{ __('Upload a video to get started.') }}</flux:text>
                 </div>
             @endif
         </div>
 
         {{-- Status bar --}}
-        <div class="border-t border-neutral-200 bg-neutral-50 px-4 py-1.5 text-center text-xs text-neutral-500 dark:border-neutral-700 dark:bg-neutral-800/60 dark:text-neutral-400">
+        <div class="border-t border-neutral-800 bg-neutral-900/70 px-4 py-2 text-center text-xs text-neutral-500 backdrop-blur">
             {{ trans_choice(':count item|:count items', count($this->directories) + count($this->files), ['count' => count($this->directories) + count($this->files)]) }}
         </div>
     </div>
