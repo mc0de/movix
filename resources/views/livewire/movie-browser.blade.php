@@ -1,4 +1,19 @@
-<div class="flex h-full w-full flex-1 flex-col gap-6">
+<div
+    class="flex h-full w-full flex-1 flex-col gap-6"
+    x-data="{
+        sortColumn: $wire.entangle('sortColumn'),
+        sortDirection: $wire.entangle('sortDirection'),
+        persist() { localStorage.setItem('movix.sort', JSON.stringify({ column: this.sortColumn, direction: this.sortDirection })); },
+    }"
+    x-init="
+        const saved = JSON.parse(localStorage.getItem('movix.sort') || 'null');
+        if (saved?.column && (saved.column !== sortColumn || saved.direction !== sortDirection)) {
+            $wire.restoreSort(saved.column, saved.direction);
+        }
+        $watch('sortColumn', () => persist());
+        $watch('sortDirection', () => persist());
+    "
+>
     {{-- Player: reacts to `playing` state, so it always stops when hidden (close, back, navigate) --}}
     {{-- Negative margins cancel the padded `flux:main` container so the video is edge-to-edge. --}}
     <div
@@ -97,31 +112,43 @@
 
             <flux:spacer />
 
-            {{-- Upload: streams straight into the current folder, no size limit --}}
-            <div x-data class="shrink-0">
-                <input
-                    type="file"
-                    x-ref="uploadInput"
-                    wire:model="uploads"
-                    multiple
-                    accept="video/*,.mp4,.webm,.ogg,.mov"
-                    class="hidden"
-                />
+            <div class="flex shrink-0 items-center gap-2">
+                {{-- Create a folder in the current location --}}
                 <button
                     type="button"
-                    x-on:click="$refs.uploadInput.click()"
-                    wire:loading.attr="disabled"
-                    wire:target="uploads"
-                    class="inline-flex items-center gap-2 rounded-md bg-[#0A84FF] px-3 py-1.5 text-sm font-medium text-white transition hover:bg-[#0071e3] disabled:cursor-not-allowed disabled:opacity-60"
+                    wire:click="startCreateFolder"
+                    class="inline-flex items-center gap-2 rounded-md border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-sm font-medium text-neutral-200 transition hover:bg-neutral-700"
                 >
-                    <flux:icon.arrow-up-tray class="size-4" wire:loading.remove wire:target="uploads" />
-                    <svg wire:loading wire:target="uploads" class="size-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
-                        <path class="opacity-90" d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" stroke-width="3" stroke-linecap="round"></path>
-                    </svg>
-                    <span wire:loading.remove wire:target="uploads">{{ __('Upload') }}</span>
-                    <span wire:loading wire:target="uploads">{{ __('Uploading…') }}</span>
+                    <flux:icon.folder-plus class="size-4" />
+                    <span class="hidden sm:inline">{{ __('New Folder') }}</span>
                 </button>
+
+                {{-- Upload: streams straight into the current folder, no size limit --}}
+                <div x-data>
+                    <input
+                        type="file"
+                        x-ref="uploadInput"
+                        wire:model="uploads"
+                        multiple
+                        accept="video/*,.mp4,.webm,.ogg,.mov"
+                        class="hidden"
+                    />
+                    <button
+                        type="button"
+                        x-on:click="$refs.uploadInput.click()"
+                        wire:loading.attr="disabled"
+                        wire:target="uploads"
+                        class="inline-flex items-center gap-2 rounded-md bg-[#0A84FF] px-3 py-1.5 text-sm font-medium text-white transition hover:bg-[#0071e3] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                        <flux:icon.arrow-up-tray class="size-4" wire:loading.remove wire:target="uploads" />
+                        <svg wire:loading wire:target="uploads" class="size-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
+                            <path class="opacity-90" d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" stroke-width="3" stroke-linecap="round"></path>
+                        </svg>
+                        <span wire:loading.remove wire:target="uploads">{{ __('Upload') }}</span>
+                        <span wire:loading wire:target="uploads">{{ __('Uploading…') }}</span>
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -134,9 +161,24 @@
 
         {{-- List header --}}
         <div class="grid grid-cols-[1fr_9rem_6rem_2.5rem] gap-3 border-b border-neutral-800 px-4 py-2 text-xs font-medium text-neutral-500">
-            <span>{{ __('Name') }}</span>
-            <span class="hidden sm:block">{{ __('Kind') }}</span>
-            <span class="text-right">{{ __('Size') }}</span>
+            <button type="button" wire:click="sortBy('name')" @class(['flex items-center gap-1 transition hover:text-neutral-300', 'text-neutral-200' => $sortColumn === 'name'])>
+                {{ __('Name') }}
+                @if ($sortColumn === 'name')
+                    <flux:icon.chevron-up @class(['size-3 transition-transform', 'rotate-180' => $sortDirection === 'desc']) />
+                @endif
+            </button>
+            <button type="button" wire:click="sortBy('kind')" @class(['hidden items-center gap-1 transition hover:text-neutral-300 sm:flex', 'text-neutral-200' => $sortColumn === 'kind'])>
+                {{ __('Kind') }}
+                @if ($sortColumn === 'kind')
+                    <flux:icon.chevron-up @class(['size-3 transition-transform', 'rotate-180' => $sortDirection === 'desc']) />
+                @endif
+            </button>
+            <button type="button" wire:click="sortBy('size')" @class(['flex items-center justify-end gap-1 transition hover:text-neutral-300', 'text-neutral-200' => $sortColumn === 'size'])>
+                {{ __('Size') }}
+                @if ($sortColumn === 'size')
+                    <flux:icon.chevron-up @class(['size-3 transition-transform', 'rotate-180' => $sortDirection === 'desc']) />
+                @endif
+            </button>
             <span class="sr-only">{{ __('Actions') }}</span>
         </div>
 
@@ -245,6 +287,21 @@
             {{ trans_choice(':count item|:count items', count($this->directories) + count($this->files), ['count' => count($this->directories) + count($this->files)]) }}
         </div>
     </div>
+
+    {{-- New folder dialog --}}
+    <flux:modal wire:model.self="showNewFolderModal" class="md:w-96">
+        <form wire:submit="createFolder" class="space-y-6">
+            <div>
+                <flux:heading size="lg">{{ __('New Folder') }}</flux:heading>
+                <flux:text class="mt-2">{{ __('Create a new folder in the current location.') }}</flux:text>
+            </div>
+            <flux:input wire:model="newFolderName" label="{{ __('Name') }}" placeholder="{{ __('Untitled Folder') }}" autofocus />
+            <div class="flex justify-end gap-2">
+                <flux:button variant="ghost" wire:click="$set('showNewFolderModal', false)">{{ __('Cancel') }}</flux:button>
+                <flux:button type="submit" variant="primary">{{ __('Create') }}</flux:button>
+            </div>
+        </form>
+    </flux:modal>
 
     {{-- Rename dialog --}}
     <flux:modal wire:model.self="showRenameModal" class="md:w-96">

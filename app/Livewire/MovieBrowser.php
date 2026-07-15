@@ -30,6 +30,16 @@ class MovieBrowser extends Component
     public ?string $playing = null;
 
     /**
+     * The column files are sorted by: "name", "kind", or "size".
+     */
+    public string $sortColumn = 'name';
+
+    /**
+     * The sort direction: "asc" or "desc".
+     */
+    public string $sortDirection = 'asc';
+
+    /**
      * Freshly selected uploads, stored into the current folder as they arrive.
      *
      * @var array<int, TemporaryUploadedFile>
@@ -64,6 +74,13 @@ class MovieBrowser extends Component
     public bool $showDeleteModal = false;
 
     /**
+     * The name entered in the new-folder dialog.
+     */
+    public string $newFolderName = '';
+
+    public bool $showNewFolderModal = false;
+
+    /**
      * The directories within the current folder.
      *
      * @return array<int, array{name: string, path: string, count: int}>
@@ -73,12 +90,18 @@ class MovieBrowser extends Component
     {
         $disk = Storage::disk('movies');
 
-        return collect($disk->directories($this->path))
+        $directories = collect($disk->directories($this->path))
             ->map(fn (string $directory) => [
                 'name' => basename($directory),
                 'path' => $directory,
                 'count' => count($disk->files($directory)) + count($disk->directories($directory)),
-            ])
+            ]);
+
+        $descending = $this->sortColumn === 'name' && $this->sortDirection === 'desc';
+
+        return $directories
+            ->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE, $descending)
+            ->values()
             ->all();
     }
 
@@ -92,16 +115,29 @@ class MovieBrowser extends Component
     {
         $disk = Storage::disk('movies');
 
-        return collect($disk->files($this->path))
+        $files = collect($disk->files($this->path))
             ->filter(fn (string $file) => Str::endsWith(Str::lower($file), ['.mp4', '.webm', '.ogg', '.mov']))
-            ->map(fn (string $file) => [
-                'name' => basename($file),
-                'path' => $file,
-                'size' => Number::fileSize($disk->size($file), precision: 1),
-                'kind' => Str::upper(Str::afterLast($file, '.')).' Video',
-            ])
-            ->values()
-            ->all();
+            ->map(function (string $file) use ($disk) {
+                $bytes = $disk->size($file);
+
+                return [
+                    'name' => basename($file),
+                    'path' => $file,
+                    'bytes' => $bytes,
+                    'size' => Number::fileSize($bytes, precision: 1),
+                    'kind' => Str::upper(Str::afterLast($file, '.')).' Video',
+                ];
+            });
+
+        $descending = $this->sortDirection === 'desc';
+
+        $sorted = match ($this->sortColumn) {
+            'size' => $files->sortBy('bytes', SORT_NUMERIC, $descending),
+            'kind' => $files->sortBy(fn (array $file) => $file['kind'].' '.$file['name'], SORT_NATURAL | SORT_FLAG_CASE, $descending),
+            default => $files->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE, $descending),
+        };
+
+        return $sorted->values()->all();
     }
 
     /**
@@ -173,6 +209,40 @@ class MovieBrowser extends Component
     }
 
     /**
+     * Sort by the given column, flipping the direction when it is already active.
+     */
+    public function sortBy(string $column): void
+    {
+        if (! in_array($column, ['name', 'kind', 'size'], true)) {
+            return;
+        }
+
+        if ($this->sortColumn === $column) {
+            $this->sortDirection = $this->sortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+            $this->sortColumn = $column;
+            $this->sortDirection = 'asc';
+        }
+
+        $this->refreshListing();
+    }
+
+    /**
+     * Apply a sort restored from the client (e.g. localStorage) on page load.
+     */
+    public function restoreSort(string $column, string $direction): void
+    {
+        if (! in_array($column, ['name', 'kind', 'size'], true)) {
+            return;
+        }
+
+        $this->sortColumn = $column;
+        $this->sortDirection = $direction === 'desc' ? 'desc' : 'asc';
+
+        $this->refreshListing();
+    }
+
+    /**
      * Store each freshly selected upload into the current folder.
      */
     public function updatedUploads(): void
@@ -191,6 +261,46 @@ class MovieBrowser extends Component
 
         $this->reset('uploads');
         $this->refreshListing();
+    }
+
+    /**
+     * Open the dialog for creating a new folder in the current location.
+     */
+    public function startCreateFolder(): void
+    {
+        $this->resetErrorBag();
+        $this->reset('newFolderName');
+        $this->showNewFolderModal = true;
+    }
+
+    /**
+     * Create a new folder with the entered name inside the current folder.
+     */
+    public function createFolder(): void
+    {
+        $this->validate([
+            'newFolderName' => ['required', 'string', 'max:255'],
+        ]);
+
+        if (Str::contains($this->newFolderName, ['/', '\\'])) {
+            $this->addError('newFolderName', __('The name may not contain slashes.'));
+
+            return;
+        }
+
+        $destination = ltrim($this->path.'/'.$this->newFolderName, '/');
+
+        if ($this->pathExists($destination)) {
+            $this->addError('newFolderName', __('An item with that name already exists.'));
+
+            return;
+        }
+
+        Storage::disk('movies')->makeDirectory($destination);
+
+        $this->reset('newFolderName');
+        $this->refreshListing();
+        $this->showNewFolderModal = false;
     }
 
     /**
