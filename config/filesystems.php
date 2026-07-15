@@ -47,6 +47,15 @@ return [
             'report' => false,
         ],
 
+        'movies' => [
+            'driver' => 'local',
+            'root' => storage_path('app/movies'),
+            'url' => rtrim((string) env('APP_URL', 'http://localhost'), '/').'/storage/movies',
+            'visibility' => 'private',
+            'throw' => false,
+            'report' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),
