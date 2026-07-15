@@ -92,51 +92,115 @@
                     </button>
                 @endforeach
             </div>
+
+            <flux:spacer />
+
+            {{-- Upload: streams straight into the current folder, no size limit --}}
+            <div x-data class="shrink-0">
+                <input
+                    type="file"
+                    x-ref="uploadInput"
+                    wire:model="uploads"
+                    multiple
+                    accept="video/*,.mp4,.webm,.ogg,.mov"
+                    class="hidden"
+                />
+                <flux:button
+                    size="sm"
+                    variant="primary"
+                    icon="arrow-up-tray"
+                    x-on:click="$refs.uploadInput.click()"
+                    wire:loading.attr="disabled"
+                    wire:target="uploads"
+                >
+                    <span wire:loading.remove wire:target="uploads">{{ __('Upload') }}</span>
+                    <span wire:loading wire:target="uploads">{{ __('Uploading…') }}</span>
+                </flux:button>
+            </div>
         </div>
 
+        @error('uploads.*')
+            <div class="border-b border-red-200 bg-red-50 px-4 py-1.5 text-xs text-red-600 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-400">
+                {{ $message }}
+            </div>
+        @enderror
+
         {{-- List header --}}
-        <div class="grid grid-cols-[1fr_8rem_6rem] gap-2 border-b border-neutral-200 px-4 py-1.5 text-xs font-medium text-neutral-500 dark:border-neutral-700 dark:text-neutral-400">
+        <div class="grid grid-cols-[1fr_8rem_6rem_2.5rem] gap-2 border-b border-neutral-200 px-4 py-1.5 text-xs font-medium text-neutral-500 dark:border-neutral-700 dark:text-neutral-400">
             <span>{{ __('Name') }}</span>
             <span class="hidden sm:block">{{ __('Kind') }}</span>
             <span class="text-right">{{ __('Size') }}</span>
+            <span class="sr-only">{{ __('Actions') }}</span>
         </div>
 
         {{-- Rows --}}
         <div class="flex-1 divide-y divide-neutral-100 overflow-y-auto dark:divide-neutral-800">
             @foreach ($this->directories as $directory)
-                <button
-                    type="button"
+                <div
                     wire:key="dir-{{ $directory['path'] }}"
-                    wire:click="open('{{ $directory['path'] }}')"
-                    class="grid w-full grid-cols-[1fr_8rem_6rem] items-center gap-2 px-4 py-2 text-left text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                    class="group grid grid-cols-[1fr_8rem_6rem_2.5rem] items-center gap-2 px-4 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800"
                 >
-                    <span class="flex min-w-0 items-center gap-2">
-                        <flux:icon.folder class="size-5 shrink-0 text-sky-500" />
-                        <span class="truncate font-medium">{{ $directory['name'] }}</span>
-                    </span>
-                    <span class="hidden text-neutral-500 sm:block dark:text-neutral-400">{{ __('Folder') }}</span>
-                    <span class="text-right text-neutral-400">{{ trans_choice(':count item|:count items', $directory['count'], ['count' => $directory['count']]) }}</span>
-                </button>
+                    <button
+                        type="button"
+                        wire:click="open('{{ $directory['path'] }}')"
+                        class="col-span-3 grid grid-cols-subgrid items-center gap-2 py-2 text-left"
+                    >
+                        <span class="flex min-w-0 items-center gap-2">
+                            <flux:icon.folder class="size-5 shrink-0 text-sky-500" />
+                            <span class="truncate font-medium">{{ $directory['name'] }}</span>
+                        </span>
+                        <span class="hidden text-neutral-500 sm:block dark:text-neutral-400">{{ __('Folder') }}</span>
+                        <span class="text-right text-neutral-400">{{ trans_choice(':count item|:count items', $directory['count'], ['count' => $directory['count']]) }}</span>
+                    </button>
+
+                    <div class="flex justify-end opacity-0 group-hover:opacity-100 focus-within:opacity-100">
+                        <flux:dropdown align="end">
+                            <flux:button size="xs" variant="ghost" icon="ellipsis-vertical" aria-label="{{ __('Folder actions') }}" />
+                            <flux:menu>
+                                <flux:menu.item icon="pencil-square" wire:click="startRename('{{ $directory['path'] }}')">{{ __('Rename') }}</flux:menu.item>
+                                <flux:menu.item icon="folder-arrow-down" wire:click="startMove('{{ $directory['path'] }}')">{{ __('Move…') }}</flux:menu.item>
+                                <flux:menu.separator />
+                                <flux:menu.item icon="trash" variant="danger" wire:click="confirmDelete('{{ $directory['path'] }}', true)">{{ __('Delete') }}</flux:menu.item>
+                            </flux:menu>
+                        </flux:dropdown>
+                    </div>
+                </div>
             @endforeach
 
             @foreach ($this->files as $file)
-                <button
-                    type="button"
+                <div
                     wire:key="file-{{ $file['path'] }}"
-                    wire:click="play('{{ $file['path'] }}')"
                     @class([
-                        'grid w-full grid-cols-[1fr_8rem_6rem] items-center gap-2 px-4 py-2 text-left text-sm',
+                        'group grid grid-cols-[1fr_8rem_6rem_2.5rem] items-center gap-2 px-4 text-sm',
                         'bg-accent text-accent-foreground' => $playing === $file['path'],
                         'hover:bg-neutral-100 dark:hover:bg-neutral-800' => $playing !== $file['path'],
                     ])
                 >
-                    <span class="flex min-w-0 items-center gap-2">
-                        <flux:icon.film @class(['size-5 shrink-0', 'text-accent-foreground' => $playing === $file['path'], 'text-neutral-400' => $playing !== $file['path']]) />
-                        <span class="truncate font-medium">{{ $file['name'] }}</span>
-                    </span>
-                    <span @class(['hidden sm:block', 'text-accent-foreground/80' => $playing === $file['path'], 'text-neutral-500 dark:text-neutral-400' => $playing !== $file['path']])>{{ $file['kind'] }}</span>
-                    <span @class(['text-right', 'text-accent-foreground/80' => $playing === $file['path'], 'text-neutral-400' => $playing !== $file['path']])>{{ $file['size'] }}</span>
-                </button>
+                    <button
+                        type="button"
+                        wire:click="play('{{ $file['path'] }}')"
+                        class="col-span-3 grid grid-cols-subgrid items-center gap-2 py-2 text-left"
+                    >
+                        <span class="flex min-w-0 items-center gap-2">
+                            <flux:icon.film @class(['size-5 shrink-0', 'text-accent-foreground' => $playing === $file['path'], 'text-neutral-400' => $playing !== $file['path']]) />
+                            <span class="truncate font-medium">{{ $file['name'] }}</span>
+                        </span>
+                        <span @class(['hidden sm:block', 'text-accent-foreground/80' => $playing === $file['path'], 'text-neutral-500 dark:text-neutral-400' => $playing !== $file['path']])>{{ $file['kind'] }}</span>
+                        <span @class(['text-right', 'text-accent-foreground/80' => $playing === $file['path'], 'text-neutral-400' => $playing !== $file['path']])>{{ $file['size'] }}</span>
+                    </button>
+
+                    <div class="flex justify-end opacity-0 group-hover:opacity-100 focus-within:opacity-100">
+                        <flux:dropdown align="end">
+                            <flux:button size="xs" variant="ghost" icon="ellipsis-vertical" aria-label="{{ __('File actions') }}" />
+                            <flux:menu>
+                                <flux:menu.item icon="pencil-square" wire:click="startRename('{{ $file['path'] }}')">{{ __('Rename') }}</flux:menu.item>
+                                <flux:menu.item icon="folder-arrow-down" wire:click="startMove('{{ $file['path'] }}')">{{ __('Move…') }}</flux:menu.item>
+                                <flux:menu.separator />
+                                <flux:menu.item icon="trash" variant="danger" wire:click="confirmDelete('{{ $file['path'] }}', false)">{{ __('Delete') }}</flux:menu.item>
+                            </flux:menu>
+                        </flux:dropdown>
+                    </div>
+                </div>
             @endforeach
 
             @if (empty($this->directories) && empty($this->files))
@@ -152,4 +216,61 @@
             {{ trans_choice(':count item|:count items', count($this->directories) + count($this->files), ['count' => count($this->directories) + count($this->files)]) }}
         </div>
     </div>
+
+    {{-- Rename dialog --}}
+    <flux:modal wire:model.self="showRenameModal" class="md:w-96">
+        <form wire:submit="rename" class="space-y-6">
+            <div>
+                <flux:heading size="lg">{{ __('Rename') }}</flux:heading>
+                <flux:text class="mt-2">{{ __('Choose a new name for this item.') }}</flux:text>
+            </div>
+            <flux:input wire:model="renameValue" label="{{ __('Name') }}" autofocus />
+            <div class="flex justify-end gap-2">
+                <flux:button variant="ghost" wire:click="$set('showRenameModal', false)">{{ __('Cancel') }}</flux:button>
+                <flux:button type="submit" variant="primary">{{ __('Rename') }}</flux:button>
+            </div>
+        </form>
+    </flux:modal>
+
+    {{-- Move dialog --}}
+    <flux:modal wire:model.self="showMoveModal" class="md:w-96">
+        <form wire:submit="move" class="space-y-6">
+            <div>
+                <flux:heading size="lg">{{ __('Move') }}</flux:heading>
+                <flux:text class="mt-2">
+                    {{ __('Move ":name" into another folder.', ['name' => $moveTarget ? basename($moveTarget) : '']) }}
+                </flux:text>
+            </div>
+            <flux:select wire:model="moveDestination" label="{{ __('Destination folder') }}">
+                <flux:select.option value="">{{ __('Movies (root)') }}</flux:select.option>
+                @foreach ($this->moveFolderOptions as $folder)
+                    <flux:select.option value="{{ $folder }}">{{ $folder }}</flux:select.option>
+                @endforeach
+            </flux:select>
+            <div class="flex justify-end gap-2">
+                <flux:button variant="ghost" wire:click="$set('showMoveModal', false)">{{ __('Cancel') }}</flux:button>
+                <flux:button type="submit" variant="primary">{{ __('Move') }}</flux:button>
+            </div>
+        </form>
+    </flux:modal>
+
+    {{-- Delete confirmation --}}
+    <flux:modal wire:model.self="showDeleteModal" class="md:w-96">
+        <div class="space-y-6">
+            <div>
+                <flux:heading size="lg">{{ __('Delete') }}</flux:heading>
+                <flux:text class="mt-2">
+                    {{ __('Are you sure you want to delete ":name"?', ['name' => $deleteTarget ? basename($deleteTarget) : '']) }}
+                    @if ($deleteTargetIsDirectory)
+                        {{ __('This removes the folder and everything inside it.') }}
+                    @endif
+                    {{ __('This cannot be undone.') }}
+                </flux:text>
+            </div>
+            <div class="flex justify-end gap-2">
+                <flux:button variant="ghost" wire:click="$set('showDeleteModal', false)">{{ __('Cancel') }}</flux:button>
+                <flux:button variant="danger" wire:click="delete">{{ __('Delete') }}</flux:button>
+            </div>
+        </div>
+    </flux:modal>
 </div>
