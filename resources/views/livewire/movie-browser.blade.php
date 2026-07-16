@@ -21,16 +21,41 @@
         wire:key="player"
         x-data="{
             playing: $wire.entangle('playing'),
+            positions: JSON.parse(localStorage.getItem('movix.positions') || '{}'),
+            saveTimer: null,
             get url() {
                 return this.playing
                     ? '{{ url('movies') }}/' + this.playing.split('/').map(encodeURIComponent).join('/')
                     : null;
+            },
+            init() {
+                // Reopen the video that was playing before an accidental refresh (a deliberate close clears this key).
+                const last = localStorage.getItem('movix.playing');
+                if (last && this.positions[last] && ! this.playing) { this.$wire.play(last); }
             },
             resume() { this.$nextTick(() => this.$refs.video?.play().catch(() => {})); },
             stop() {
                 if (this.$refs.video) { this.$refs.video.pause(); }
                 if (document.fullscreenElement) { document.exitFullscreen(); }
             },
+            restorePosition() {
+                const at = this.positions[this.playing];
+                if (this.$refs.video && at) { this.$refs.video.currentTime = at; }
+            },
+            savePosition() {
+                const v = this.$refs.video;
+                if (! this.playing || ! v || ! v.duration) { return; }
+                // Forget the position once effectively finished, so it starts fresh next time.
+                if (v.currentTime > 1 && v.currentTime < v.duration - 5) { this.positions[this.playing] = v.currentTime; }
+                else { delete this.positions[this.playing]; }
+                localStorage.setItem('movix.positions', JSON.stringify(this.positions));
+            },
+            startSaving() {
+                localStorage.setItem('movix.playing', this.playing);
+                clearInterval(this.saveTimer);
+                this.saveTimer = setInterval(() => this.savePosition(), 5000);
+            },
+            stopSaving() { clearInterval(this.saveTimer); this.saveTimer = null; },
             toggleFullscreen() {
                 if (document.fullscreenElement) { document.exitFullscreen(); }
                 else { this.$refs.video?.requestFullscreen(); }
@@ -40,10 +65,16 @@
                 if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) { return; }
                 if (e.key === 'f' || e.key === 'F') { this.toggleFullscreen(); }
             },
-            close() { this.playing = null; },
+            close() {
+                this.savePosition();
+                this.stopSaving();
+                localStorage.removeItem('movix.playing');
+                this.playing = null;
+            },
         }"
         x-effect="url ? resume() : stop()"
         x-on:keydown.window="onKey($event)"
+        x-on:beforeunload.window="savePosition()"
         x-show="playing"
         x-cloak
     >
@@ -57,6 +88,10 @@
                 controls
                 playsinline
                 preload="metadata"
+                x-on:loadedmetadata="restorePosition()"
+                x-on:play="startSaving()"
+                x-on:pause="savePosition(); stopSaving()"
+                x-on:ended="savePosition(); stopSaving(); localStorage.removeItem('movix.playing')"
             ></video>
         </div>
 
