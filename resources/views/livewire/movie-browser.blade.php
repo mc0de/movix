@@ -17,10 +17,9 @@
     {{-- Player: reacts to `playing` state, so it always stops when hidden (close, back, navigate) --}}
     {{-- Negative margins cancel the padded `flux:main` container so the video is edge-to-edge. --}}
     <div
-        class="-mx-6 -mt-6 lg:-mx-8 lg:-mt-8"
+        class="-mx-6 -mt-6 flex h-[calc(100vh-3.5rem)] flex-col lg:-mx-8 lg:-mt-8"
         wire:key="player"
         x-data="{
-            theater: false,
             playing: $wire.entangle('playing'),
             get url() {
                 return this.playing
@@ -39,7 +38,6 @@
             onKey(e) {
                 if (! this.playing) { return; }
                 if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) { return; }
-                if (e.key === 't' || e.key === 'T') { this.theater = ! this.theater; }
                 if (e.key === 'f' || e.key === 'F') { this.toggleFullscreen(); }
             },
             close() { this.playing = null; },
@@ -49,8 +47,8 @@
         x-show="playing"
         x-cloak
     >
-        {{-- Full-width black stage with a set height; video fills it proportionally --}}
-        <div class="flex w-full items-center justify-center bg-black transition-all duration-300" :class="theater ? 'h-[85vh]' : 'h-[70vh]'">
+        {{-- Black stage grows to fill the space above the title bar; video fits proportionally --}}
+        <div class="flex min-h-0 w-full flex-1 items-center justify-center bg-black">
             <video
                 x-ref="video"
                 :src="url"
@@ -62,17 +60,13 @@
             ></video>
         </div>
 
-        {{-- Below the video: now-playing title + controls (re-padded to align with page content) --}}
-        <div class="flex items-center justify-between gap-3 px-6 py-3 lg:px-8">
+        {{-- Pinned to the bottom of the player: now-playing title + controls (re-padded to align with page content) --}}
+        <div class="flex shrink-0 items-center justify-between gap-3 px-6 py-3 lg:px-8">
             <div class="flex min-w-0 items-center gap-2.5">
                 <flux:heading class="truncate font-semibold tabular-nums text-neutral-100">{{ $playing ? basename($playing) : '' }}</flux:heading>
                 <span class="hidden shrink-0 text-xs text-neutral-500 sm:block">{{ $playing ? str($playing)->afterLast('.')->upper() : '' }}</span>
             </div>
             <div class="flex shrink-0 items-center gap-1">
-                <flux:button size="sm" variant="ghost" icon="rectangle-group" x-on:click="theater = ! theater">
-                    <span class="hidden sm:inline">{{ __('Theater') }}</span>
-                    <flux:badge size="sm" class="ml-1">T</flux:badge>
-                </flux:button>
                 <flux:button size="sm" variant="ghost" icon="arrows-pointing-out" x-on:click="toggleFullscreen()">
                     <span class="hidden sm:inline">{{ __('Fullscreen') }}</span>
                     <flux:badge size="sm" class="ml-1">F</flux:badge>
