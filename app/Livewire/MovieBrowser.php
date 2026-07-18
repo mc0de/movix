@@ -21,8 +21,13 @@ class MovieBrowser extends Component
     /**
      * The current folder being browsed, relative to the "movies" disk root.
      */
-    #[Url]
+    #[Url(history: true)]
     public string $path = '';
+
+    /**
+     * A case-insensitive filter applied to the current folder's contents.
+     */
+    public string $search = '';
 
     /**
      * The file currently selected for playback, relative to the disk root.
@@ -38,6 +43,13 @@ class MovieBrowser extends Component
      * The sort direction: "asc" or "desc".
      */
     public string $sortDirection = 'asc';
+
+    /**
+     * The paths of the items currently checked for a batch action.
+     *
+     * @var array<int, string>
+     */
+    public array $selected = [];
 
     /**
      * Freshly selected uploads, stored into the current folder as they arrive.
@@ -56,20 +68,22 @@ class MovieBrowser extends Component
     public bool $showRenameModal = false;
 
     /**
-     * The item (file or folder) targeted by the move dialog.
+     * The items (files or folders) targeted by the move dialog.
+     *
+     * @var array<int, string>
      */
-    public ?string $moveTarget = null;
+    public array $moveTargets = [];
 
     public string $moveDestination = '';
 
     public bool $showMoveModal = false;
 
     /**
-     * The item (file or folder) targeted by the delete dialog.
+     * The items (files or folders) targeted by the delete dialog.
+     *
+     * @var array<int, string>
      */
-    public ?string $deleteTarget = null;
-
-    public bool $deleteTargetIsDirectory = false;
+    public array $deleteTargets = [];
 
     public bool $showDeleteModal = false;
 
@@ -95,7 +109,10 @@ class MovieBrowser extends Component
                 'name' => basename($directory),
                 'path' => $directory,
                 'count' => count($disk->files($directory)) + count($disk->directories($directory)),
-            ]);
+            ])
+            ->when($this->search !== '', fn ($directories) => $directories->filter(
+                fn (array $directory) => Str::contains($directory['name'], $this->search, ignoreCase: true)
+            ));
 
         $descending = $this->sortColumn === 'name' && $this->sortDirection === 'desc';
 
@@ -127,7 +144,10 @@ class MovieBrowser extends Component
                     'size' => Number::fileSize($bytes, precision: 1),
                     'kind' => Str::upper(Str::afterLast($file, '.')).' Video',
                 ];
-            });
+            })
+            ->when($this->search !== '', fn ($files) => $files->filter(
+                fn (array $file) => Str::contains($file['name'], $this->search, ignoreCase: true)
+            ));
 
         $descending = $this->sortDirection === 'desc';
 
@@ -138,6 +158,40 @@ class MovieBrowser extends Component
         };
 
         return $sorted->values()->all();
+    }
+
+    /**
+     * The paths of every file and folder currently visible in the listing.
+     *
+     * @return array<int, string>
+     */
+    #[Computed]
+    public function visiblePaths(): array
+    {
+        return array_merge(
+            array_column($this->directories, 'path'),
+            array_column($this->files, 'path'),
+        );
+    }
+
+    /**
+     * Whether every visible item is currently selected.
+     */
+    #[Computed]
+    public function allVisibleSelected(): bool
+    {
+        $visible = $this->visiblePaths;
+
+        return $visible !== [] && count(array_intersect($visible, $this->selected)) === count($visible);
+    }
+
+    /**
+     * Whether at least one visible item is currently selected.
+     */
+    #[Computed]
+    public function someVisibleSelected(): bool
+    {
+        return count(array_intersect($this->visiblePaths, $this->selected)) > 0;
     }
 
     /**
@@ -173,20 +227,35 @@ class MovieBrowser extends Component
     }
 
     /**
-     * Every folder on the disk that the move target can be moved into.
+     * Every folder on the disk that the move targets can be moved into.
      *
      * @return array<int, string>
      */
     #[Computed]
     public function moveFolderOptions(): array
     {
-        $target = $this->moveTarget;
+        $targets = $this->moveTargets;
 
         return collect(Storage::disk('movies')->allDirectories())
-            ->reject(fn (string $folder) => $target !== null && ($folder === $target || Str::startsWith($folder, $target.'/')))
+            ->reject(fn (string $folder) => collect($targets)->contains(
+                fn (string $target) => $folder === $target || Str::startsWith($folder, $target.'/')
+            ))
             ->sort()
             ->values()
             ->all();
+    }
+
+    /**
+     * Whether any item queued for deletion is a directory.
+     */
+    #[Computed]
+    public function deletingDirectory(): bool
+    {
+        $disk = Storage::disk('movies');
+
+        return collect($this->deleteTargets)
+            ->reject(fn (string $target) => $target === '' || Str::contains($target, '..'))
+            ->contains(fn (string $target) => $disk->directoryExists($target));
     }
 
     /**
@@ -194,8 +263,17 @@ class MovieBrowser extends Component
      */
     public function open(string $path): void
     {
-        $this->reset('playing');
         $this->path = $path;
+        $this->reset('playing', 'selected', 'search');
+    }
+
+    /**
+     * Reset transient view state when the browsed folder changes via the URL,
+     * such as the browser's back/forward buttons.
+     */
+    public function updatedPath(): void
+    {
+        $this->reset('playing', 'selected', 'search');
     }
 
     /**
@@ -206,6 +284,38 @@ class MovieBrowser extends Component
         if (Storage::disk('movies')->exists($file)) {
             $this->playing = $file;
         }
+    }
+
+    /**
+     * Toggle whether a single item is included in the current selection.
+     */
+    public function toggleSelect(string $path): void
+    {
+        if (in_array($path, $this->selected, true)) {
+            $this->selected = array_values(array_diff($this->selected, [$path]));
+        } else {
+            $this->selected[] = $path;
+        }
+    }
+
+    /**
+     * Select every visible item, or clear the selection when all are selected.
+     */
+    public function toggleSelectAll(): void
+    {
+        if ($this->allVisibleSelected) {
+            $this->selected = array_values(array_diff($this->selected, $this->visiblePaths));
+        } else {
+            $this->selected = array_values(array_unique(array_merge($this->selected, $this->visiblePaths)));
+        }
+    }
+
+    /**
+     * Clear the current selection.
+     */
+    public function clearSelection(): void
+    {
+        $this->reset('selected');
     }
 
     /**
@@ -348,78 +458,116 @@ class MovieBrowser extends Component
     }
 
     /**
-     * Open the move dialog for the given file or folder.
+     * Open the move dialog for a single file or folder.
      */
     public function startMove(string $path): void
     {
         $this->resetErrorBag();
-        $this->moveTarget = $path;
+        $this->moveTargets = [$path];
         $this->moveDestination = Str::contains($path, '/') ? Str::beforeLast($path, '/') : '';
         $this->showMoveModal = true;
     }
 
     /**
-     * Move the targeted file or folder into the chosen destination folder.
+     * Open the move dialog for every currently selected item.
+     */
+    public function startMoveSelected(): void
+    {
+        if ($this->selected === []) {
+            return;
+        }
+
+        $this->resetErrorBag();
+        $this->moveTargets = $this->selected;
+        $this->moveDestination = $this->path;
+        $this->showMoveModal = true;
+    }
+
+    /**
+     * Move every targeted file or folder into the chosen destination folder.
      */
     public function move(): void
     {
-        $this->assertSafe($this->moveTarget);
-
-        if (Str::contains($this->moveDestination, '..')) {
-            abort(404);
-        }
-
-        $target = (string) $this->moveTarget;
-        $destination = ltrim($this->moveDestination.'/'.basename($target), '/');
-
-        if ($destination === $target) {
+        if ($this->moveTargets === []) {
             $this->showMoveModal = false;
 
             return;
         }
 
-        if ($this->pathExists($destination)) {
-            $this->addError('moveDestination', __('An item with that name already exists in that folder.'));
-
-            return;
+        if (Str::contains($this->moveDestination, '..')) {
+            abort(404);
         }
 
-        Storage::disk('movies')->move($target, $destination);
+        $disk = Storage::disk('movies');
 
-        $this->afterMutation($target, $destination);
+        foreach ($this->moveTargets as $target) {
+            $this->assertSafe($target);
+
+            $destination = ltrim($this->moveDestination.'/'.basename($target), '/');
+
+            if ($destination === $target) {
+                continue;
+            }
+
+            if ($this->pathExists($destination)) {
+                $this->addError('moveDestination', __('An item named ":name" already exists in that folder.', ['name' => basename($target)]));
+
+                return;
+            }
+
+            $disk->move($target, $destination);
+            $this->afterMutation($target, $destination);
+        }
+
+        $this->clearSelection();
+        $this->refreshListing();
         $this->showMoveModal = false;
     }
 
     /**
-     * Open the delete confirmation dialog for the given file or folder.
+     * Open the delete confirmation dialog for a single file or folder.
      */
-    public function confirmDelete(string $path, bool $isDirectory): void
+    public function confirmDelete(string $path, bool $isDirectory = false): void
     {
-        $this->deleteTarget = $path;
-        $this->deleteTargetIsDirectory = $isDirectory;
+        $this->deleteTargets = [$path];
         $this->showDeleteModal = true;
     }
 
     /**
-     * Delete the targeted file, or folder and all of its contents.
+     * Open the delete confirmation dialog for every currently selected item.
+     */
+    public function confirmDeleteSelected(): void
+    {
+        if ($this->selected === []) {
+            return;
+        }
+
+        $this->deleteTargets = $this->selected;
+        $this->showDeleteModal = true;
+    }
+
+    /**
+     * Delete every targeted file, or folder and all of its contents.
      */
     public function delete(): void
     {
-        $this->assertSafe($this->deleteTarget);
-
-        $target = (string) $this->deleteTarget;
         $disk = Storage::disk('movies');
 
-        if ($this->deleteTargetIsDirectory) {
-            $disk->deleteDirectory($target);
-        } else {
-            $disk->delete($target);
+        foreach ($this->deleteTargets as $target) {
+            $this->assertSafe($target);
+
+            if ($disk->directoryExists($target)) {
+                $disk->deleteDirectory($target);
+            } else {
+                $disk->delete($target);
+            }
+
+            if ($this->playing === $target || Str::startsWith((string) $this->playing, $target.'/')) {
+                $this->reset('playing');
+            }
         }
 
-        if ($this->playing === $target || ($this->deleteTargetIsDirectory && Str::startsWith((string) $this->playing, $target.'/'))) {
-            $this->reset('playing');
-        }
-
+        $this->clearSelection();
         $this->refreshListing();
         $this->showDeleteModal = false;
     }
@@ -487,6 +635,13 @@ class MovieBrowser extends Component
      */
     private function refreshListing(): void
     {
-        unset($this->directories, $this->files, $this->moveFolderOptions);
+        unset(
+            $this->directories,
+            $this->files,
+            $this->moveFolderOptions,
+            $this->visiblePaths,
+            $this->allVisibleSelected,
+            $this->someVisibleSelected,
+        );
     }
 }

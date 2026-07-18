@@ -251,3 +251,137 @@ test('sortBy ignores unknown columns', function () {
         ->assertSet('sortColumn', 'name')
         ->assertSet('sortDirection', 'asc');
 });
+
+test('search filters files and folders in the current folder', function () {
+    Storage::disk('movies')->put('The Matrix.mp4', 'x');
+    Storage::disk('movies')->put('Inception.mp4', 'x');
+    Storage::disk('movies')->makeDirectory('Marvel');
+    Storage::disk('movies')->makeDirectory('Comedy');
+
+    $component = Livewire::test(MovieBrowser::class)->set('search', 'ma');
+
+    expect(array_column($component->get('files'), 'name'))->toBe(['The Matrix.mp4'])
+        ->and(array_column($component->get('directories'), 'name'))->toBe(['Marvel']);
+});
+
+test('toggleSelect adds and removes an item from the selection', function () {
+    Storage::disk('movies')->put('movie.mp4', 'x');
+
+    Livewire::test(MovieBrowser::class)
+        ->call('toggleSelect', 'movie.mp4')
+        ->assertSet('selected', ['movie.mp4'])
+        ->call('toggleSelect', 'movie.mp4')
+        ->assertSet('selected', []);
+});
+
+test('toggleSelectAll selects every visible item then clears them', function () {
+    Storage::disk('movies')->put('a.mp4', 'x');
+    Storage::disk('movies')->put('b.mp4', 'x');
+    Storage::disk('movies')->makeDirectory('Folder');
+
+    $component = Livewire::test(MovieBrowser::class)
+        ->call('toggleSelectAll');
+
+    expect($component->get('selected'))->toEqualCanonicalizing(['a.mp4', 'b.mp4', 'Folder']);
+
+    $component->call('toggleSelectAll')->assertSet('selected', []);
+});
+
+test('select all respects the active search filter', function () {
+    Storage::disk('movies')->put('Alpha.mp4', 'x');
+    Storage::disk('movies')->put('Beta.mp4', 'x');
+
+    $component = Livewire::test(MovieBrowser::class)
+        ->set('search', 'alpha')
+        ->call('toggleSelectAll');
+
+    expect($component->get('selected'))->toBe(['Alpha.mp4']);
+});
+
+test('moves several selected items into another folder at once', function () {
+    Storage::disk('movies')->put('one.mp4', 'x');
+    Storage::disk('movies')->put('two.mp4', 'x');
+    Storage::disk('movies')->makeDirectory('Archive');
+
+    Livewire::test(MovieBrowser::class)
+        ->set('selected', ['one.mp4', 'two.mp4'])
+        ->call('startMoveSelected')
+        ->assertSet('showMoveModal', true)
+        ->set('moveDestination', 'Archive')
+        ->call('move')
+        ->assertHasNoErrors()
+        ->assertSet('showMoveModal', false)
+        ->assertSet('selected', []);
+
+    Storage::disk('movies')->assertExists('Archive/one.mp4');
+    Storage::disk('movies')->assertExists('Archive/two.mp4');
+    Storage::disk('movies')->assertMissing('one.mp4');
+    Storage::disk('movies')->assertMissing('two.mp4');
+});
+
+test('batch move folder options exclude every selected folder', function () {
+    Storage::disk('movies')->makeDirectory('First/Inner');
+    Storage::disk('movies')->makeDirectory('Second');
+    Storage::disk('movies')->makeDirectory('Third');
+
+    $options = Livewire::test(MovieBrowser::class)
+        ->set('selected', ['First', 'Second'])
+        ->call('startMoveSelected')
+        ->get('moveFolderOptions');
+
+    expect($options)->toContain('Third')
+        ->not->toContain('First')
+        ->not->toContain('First/Inner')
+        ->not->toContain('Second');
+});
+
+test('deletes several selected items at once', function () {
+    Storage::disk('movies')->put('one.mp4', 'x');
+    Storage::disk('movies')->put('Season 1/ep1.mp4', 'x');
+
+    Livewire::test(MovieBrowser::class)
+        ->set('selected', ['one.mp4', 'Season 1'])
+        ->call('confirmDeleteSelected')
+        ->assertSet('showDeleteModal', true)
+        ->call('delete')
+        ->assertSet('showDeleteModal', false)
+        ->assertSet('selected', []);
+
+    Storage::disk('movies')->assertMissing('one.mp4');
+    expect(Storage::disk('movies')->directoryExists('Season 1'))->toBeFalse();
+});
+
+test('startMoveSelected does nothing without a selection', function () {
+    Livewire::test(MovieBrowser::class)
+        ->call('startMoveSelected')
+        ->assertSet('showMoveModal', false);
+});
+
+test('confirmDeleteSelected does nothing without a selection', function () {
+    Livewire::test(MovieBrowser::class)
+        ->call('confirmDeleteSelected')
+        ->assertSet('showDeleteModal', false);
+});
+
+test('navigating to another folder clears the selection and search', function () {
+    Storage::disk('movies')->put('Action/movie.mp4', 'x');
+
+    Livewire::test(MovieBrowser::class)
+        ->set('selected', ['Action'])
+        ->set('search', 'mo')
+        ->call('open', 'Action')
+        ->assertSet('path', 'Action')
+        ->assertSet('selected', [])
+        ->assertSet('search', '');
+});
+
+test('deleting the last selected playing file stops playback', function () {
+    Storage::disk('movies')->put('movie.mp4', 'x');
+
+    Livewire::test(MovieBrowser::class)
+        ->call('play', 'movie.mp4')
+        ->set('selected', ['movie.mp4'])
+        ->call('confirmDeleteSelected')
+        ->call('delete')
+        ->assertSet('playing', null);
+});

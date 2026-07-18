@@ -64,6 +64,7 @@
                 if (! this.playing) { return; }
                 if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) { return; }
                 if (e.key === 'f' || e.key === 'F') { this.toggleFullscreen(); }
+                if (e.key === 'Escape' && ! document.fullscreenElement) { this.close(); }
             },
             close() {
                 this.savePosition();
@@ -142,6 +143,17 @@
             <flux:spacer />
 
             <div class="flex shrink-0 items-center gap-2">
+                {{-- Filter the current folder by name --}}
+                <div class="relative hidden md:block">
+                    <flux:icon.magnifying-glass class="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-neutral-500" />
+                    <input
+                        type="search"
+                        wire:model.live.debounce.300ms="search"
+                        placeholder="{{ __('Search this folder') }}"
+                        class="w-48 rounded-md border border-neutral-700 bg-neutral-800 py-1.5 pl-8 pr-3 text-sm text-neutral-200 placeholder-neutral-500 transition focus:border-[#0A84FF] focus:outline-none focus:ring-1 focus:ring-[#0A84FF]"
+                    />
+                </div>
+
                 {{-- Create a folder in the current location --}}
                 <button
                     type="button"
@@ -188,8 +200,33 @@
             </div>
         @enderror
 
+        {{-- Selection action bar: appears while one or more items are checked --}}
+        @if (count($selected) > 0)
+            <div class="flex items-center gap-3 border-b border-[#0A84FF]/40 bg-[#0A84FF]/10 px-4 py-2 text-sm text-neutral-100">
+                <span class="font-medium tabular-nums">{{ trans_choice(':count selected|:count selected', count($selected), ['count' => count($selected)]) }}</span>
+                <flux:spacer />
+                <flux:button size="xs" variant="ghost" icon="folder-arrow-down" wire:click="startMoveSelected">{{ __('Move') }}</flux:button>
+                <flux:button size="xs" variant="ghost" icon="trash" wire:click="confirmDeleteSelected">{{ __('Delete') }}</flux:button>
+                <flux:button size="xs" variant="ghost" icon="x-mark" wire:click="clearSelection">{{ __('Clear') }}</flux:button>
+            </div>
+        @endif
+
         {{-- List header --}}
-        <div class="grid grid-cols-[1fr_9rem_6rem_2.5rem] gap-3 border-b border-neutral-800 px-4 py-2 text-xs font-medium text-neutral-500">
+        <div class="grid grid-cols-[1.75rem_1fr_9rem_6rem_6rem] items-center gap-3 border-b border-neutral-800 px-4 py-2 text-xs font-medium text-neutral-500">
+            {{-- Select-all: three states (none / some / all) driven entirely server-side --}}
+            <button type="button" wire:click="toggleSelectAll" class="flex items-center justify-center" aria-label="{{ __('Select all') }}">
+                <span @class([
+                    'flex size-4 items-center justify-center rounded border transition',
+                    'border-[#0A84FF] bg-[#0A84FF] text-white' => $this->allVisibleSelected || $this->someVisibleSelected,
+                    'border-neutral-600 hover:border-neutral-400' => ! $this->allVisibleSelected && ! $this->someVisibleSelected,
+                ])>
+                    @if ($this->allVisibleSelected)
+                        <flux:icon.check class="size-3" />
+                    @elseif ($this->someVisibleSelected)
+                        <flux:icon.minus class="size-3" />
+                    @endif
+                </span>
+            </button>
             <button type="button" wire:click="sortBy('name')" @class(['flex items-center gap-1 transition hover:text-neutral-300', 'text-neutral-200' => $sortColumn === 'name'])>
                 {{ __('Name') }}
                 @if ($sortColumn === 'name')
@@ -214,10 +251,33 @@
         {{-- Rows --}}
         <div class="flex-1 divide-y divide-white/[0.04] overflow-y-auto">
             @foreach ($this->directories as $directory)
+                @php($isSelected = in_array($directory['path'], $selected, true))
                 <div
                     wire:key="dir-{{ $directory['path'] }}"
-                    class="group grid grid-cols-[1fr_9rem_6rem_2.5rem] items-center gap-3 px-4 text-sm transition-colors hover:bg-white/5"
+                    @class([
+                        'group grid grid-cols-[1.75rem_1fr_9rem_6rem_6rem] items-center gap-3 px-4 text-sm transition-colors',
+                        'bg-[#0A84FF]/10' => $isSelected,
+                        'hover:bg-white/5' => ! $isSelected,
+                    ])
                 >
+                    {{-- Selection checkbox --}}
+                    <button
+                        type="button"
+                        wire:click="toggleSelect('{{ $directory['path'] }}')"
+                        class="flex items-center justify-center"
+                        aria-label="{{ __('Select') }}"
+                    >
+                        <span @class([
+                            'flex size-4 items-center justify-center rounded border transition',
+                            'border-[#0A84FF] bg-[#0A84FF] text-white' => $isSelected,
+                            'border-neutral-500 hover:border-neutral-300' => ! $isSelected,
+                        ])>
+                            @if ($isSelected)
+                                <flux:icon.check class="size-3" />
+                            @endif
+                        </span>
+                    </button>
+
                     <button
                         type="button"
                         wire:click="open('{{ $directory['path'] }}')"
@@ -231,30 +291,47 @@
                         <span class="text-right tabular-nums text-neutral-500">{{ trans_choice(':count item|:count items', $directory['count'], ['count' => $directory['count']]) }}</span>
                     </button>
 
-                    <div class="flex justify-end opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
-                        <flux:dropdown align="end">
-                            <flux:button size="xs" variant="ghost" icon="ellipsis-vertical" aria-label="{{ __('Folder actions') }}" />
-                            <flux:menu>
-                                <flux:menu.item icon="pencil-square" wire:click="startRename('{{ $directory['path'] }}')">{{ __('Rename') }}</flux:menu.item>
-                                <flux:menu.item icon="folder-arrow-down" wire:click="startMove('{{ $directory['path'] }}')">{{ __('Move…') }}</flux:menu.item>
-                                <flux:menu.separator />
-                                <flux:menu.item icon="trash" variant="danger" wire:click="confirmDelete('{{ $directory['path'] }}', true)">{{ __('Delete') }}</flux:menu.item>
-                            </flux:menu>
-                        </flux:dropdown>
+                    {{-- Inline actions: rename, move, delete kept visible side by side --}}
+                    <div class="flex items-center justify-end gap-0.5 opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
+                        <flux:button size="xs" variant="ghost" icon="pencil-square" wire:click="startRename('{{ $directory['path'] }}')" aria-label="{{ __('Rename') }}" />
+                        <flux:button size="xs" variant="ghost" icon="folder-arrow-down" wire:click="startMove('{{ $directory['path'] }}')" aria-label="{{ __('Move') }}" />
+                        <flux:button size="xs" variant="ghost" icon="trash" wire:click="confirmDelete('{{ $directory['path'] }}', true)" aria-label="{{ __('Delete') }}" />
                     </div>
                 </div>
             @endforeach
 
             @foreach ($this->files as $file)
                 @php($isPlaying = $playing === $file['path'])
+                @php($isSelected = in_array($file['path'], $selected, true))
                 <div
                     wire:key="file-{{ $file['path'] }}"
                     @class([
-                        'group grid grid-cols-[1fr_9rem_6rem_2.5rem] items-center gap-3 px-4 text-sm transition-colors',
+                        'group grid grid-cols-[1.75rem_1fr_9rem_6rem_6rem] items-center gap-3 px-4 text-sm transition-colors',
                         'bg-[#0A84FF]' => $isPlaying,
-                        'hover:bg-white/5' => ! $isPlaying,
+                        'bg-[#0A84FF]/10' => $isSelected && ! $isPlaying,
+                        'hover:bg-white/5' => ! $isPlaying && ! $isSelected,
                     ])
                 >
+                    {{-- Selection checkbox --}}
+                    <button
+                        type="button"
+                        wire:click="toggleSelect('{{ $file['path'] }}')"
+                        class="flex items-center justify-center"
+                        aria-label="{{ __('Select') }}"
+                    >
+                        <span @class([
+                            'flex size-4 items-center justify-center rounded border transition',
+                            'border-white bg-white text-[#0A84FF]' => $isSelected && $isPlaying,
+                            'border-white/70' => ! $isSelected && $isPlaying,
+                            'border-[#0A84FF] bg-[#0A84FF] text-white' => $isSelected && ! $isPlaying,
+                            'border-neutral-500 hover:border-neutral-300' => ! $isSelected && ! $isPlaying,
+                        ])>
+                            @if ($isSelected)
+                                <flux:icon.check class="size-3" />
+                            @endif
+                        </span>
+                    </button>
+
                     <button
                         type="button"
                         wire:click="play('{{ $file['path'] }}')"
@@ -284,29 +361,30 @@
                         ])>{{ $file['size'] }}</span>
                     </button>
 
+                    {{-- Inline actions: rename, move, delete kept visible side by side --}}
                     <div @class([
-                        'flex justify-end transition',
+                        'flex items-center justify-end gap-0.5 transition',
                         'opacity-100' => $isPlaying,
                         'opacity-0 group-hover:opacity-100 focus-within:opacity-100' => ! $isPlaying,
                     ])>
-                        <flux:dropdown align="end">
-                            <flux:button size="xs" variant="ghost" icon="ellipsis-vertical" aria-label="{{ __('File actions') }}" @class(['text-white' => $isPlaying]) />
-                            <flux:menu>
-                                <flux:menu.item icon="pencil-square" wire:click="startRename('{{ $file['path'] }}')">{{ __('Rename') }}</flux:menu.item>
-                                <flux:menu.item icon="folder-arrow-down" wire:click="startMove('{{ $file['path'] }}')">{{ __('Move…') }}</flux:menu.item>
-                                <flux:menu.separator />
-                                <flux:menu.item icon="trash" variant="danger" wire:click="confirmDelete('{{ $file['path'] }}', false)">{{ __('Delete') }}</flux:menu.item>
-                            </flux:menu>
-                        </flux:dropdown>
+                        <flux:button size="xs" variant="ghost" icon="pencil-square" wire:click="startRename('{{ $file['path'] }}')" aria-label="{{ __('Rename') }}" @class(['text-white' => $isPlaying]) />
+                        <flux:button size="xs" variant="ghost" icon="folder-arrow-down" wire:click="startMove('{{ $file['path'] }}')" aria-label="{{ __('Move') }}" @class(['text-white' => $isPlaying]) />
+                        <flux:button size="xs" variant="ghost" icon="trash" wire:click="confirmDelete('{{ $file['path'] }}', false)" aria-label="{{ __('Delete') }}" @class(['text-white' => $isPlaying]) />
                     </div>
                 </div>
             @endforeach
 
             @if (empty($this->directories) && empty($this->files))
                 <div class="flex flex-col items-center gap-3 py-20 text-center">
-                    <flux:icon.film class="size-10 text-neutral-700" />
-                    <flux:heading class="text-base font-medium text-neutral-300">{{ __('This folder is empty') }}</flux:heading>
-                    <flux:text class="text-neutral-500">{{ __('Upload a video to get started.') }}</flux:text>
+                    @if ($search !== '')
+                        <flux:icon.magnifying-glass class="size-10 text-neutral-700" />
+                        <flux:heading class="text-base font-medium text-neutral-300">{{ __('No matches') }}</flux:heading>
+                        <flux:text class="text-neutral-500">{{ __('Nothing in this folder matches ":search".', ['search' => $search]) }}</flux:text>
+                    @else
+                        <flux:icon.film class="size-10 text-neutral-700" />
+                        <flux:heading class="text-base font-medium text-neutral-300">{{ __('This folder is empty') }}</flux:heading>
+                        <flux:text class="text-neutral-500">{{ __('Upload a video to get started.') }}</flux:text>
+                    @endif
                 </div>
             @endif
         </div>
@@ -314,6 +392,9 @@
         {{-- Status bar --}}
         <div class="border-t border-neutral-800 bg-neutral-900/70 px-4 py-2 text-center text-xs text-neutral-500 backdrop-blur">
             {{ trans_choice(':count item|:count items', count($this->directories) + count($this->files), ['count' => count($this->directories) + count($this->files)]) }}
+            @if ($search !== '')
+                {{ __('matching ":search"', ['search' => $search]) }}
+            @endif
         </div>
     </div>
 
@@ -353,7 +434,11 @@
             <div>
                 <flux:heading size="lg">{{ __('Move') }}</flux:heading>
                 <flux:text class="mt-2">
-                    {{ __('Move ":name" into another folder.', ['name' => $moveTarget ? basename($moveTarget) : '']) }}
+                    @if (count($moveTargets) === 1)
+                        {{ __('Move ":name" into another folder.', ['name' => basename($moveTargets[0])]) }}
+                    @else
+                        {{ __('Move :count items into another folder.', ['count' => count($moveTargets)]) }}
+                    @endif
                 </flux:text>
             </div>
             <flux:select wire:model="moveDestination" label="{{ __('Destination folder') }}">
@@ -375,9 +460,13 @@
             <div>
                 <flux:heading size="lg">{{ __('Delete') }}</flux:heading>
                 <flux:text class="mt-2">
-                    {{ __('Are you sure you want to delete ":name"?', ['name' => $deleteTarget ? basename($deleteTarget) : '']) }}
-                    @if ($deleteTargetIsDirectory)
-                        {{ __('This removes the folder and everything inside it.') }}
+                    @if (count($deleteTargets) === 1)
+                        {{ __('Are you sure you want to delete ":name"?', ['name' => basename($deleteTargets[0])]) }}
+                    @else
+                        {{ __('Are you sure you want to delete these :count items?', ['count' => count($deleteTargets)]) }}
+                    @endif
+                    @if ($this->deletingDirectory)
+                        {{ __('Folders are removed with everything inside them.') }}
                     @endif
                     {{ __('This cannot be undone.') }}
                 </flux:text>
