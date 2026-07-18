@@ -1,7 +1,5 @@
-<x-layouts::auth :title="__('Log in')">
+<x-layouts::auth.cinema :title="__('Log in')">
     <div class="flex flex-col gap-6">
-        <x-auth-header :title="__('Log in to your account')" :description="__('Enter your email and password below to log in')" />
-
         <!-- Session Status -->
         <x-auth-session-status class="text-center" :status="session('status')" />
 
@@ -11,7 +9,7 @@
             @csrf
 
             <!-- Email Address -->
-            <flux:input
+            <x-cinema.input
                 name="email"
                 :label="__('Email address')"
                 :value="old('email')"
@@ -23,33 +21,36 @@
             />
 
             <!-- Password -->
-            <div class="relative">
-                <flux:input
+            <div class="flex flex-col">
+                <div class="mb-[9px] flex items-baseline justify-between gap-3">
+                    <span class="cinema-label">{{ __('Password') }}</span>
+
+                    @if (Route::has('password.request'))
+                        <x-cinema.link class="cinema-forgot" :href="route('password.request')" wire:navigate>
+                            {{ __('Forgot your password?') }}
+                        </x-cinema.link>
+                    @endif
+                </div>
+
+                <x-cinema.input
                     name="password"
-                    :label="__('Password')"
                     type="password"
                     required
                     autocomplete="current-password"
                     :placeholder="__('Password')"
                     viewable
                 />
-
-                @if (Route::has('password.request'))
-                    <flux:link class="absolute top-0 text-sm end-0" :href="route('password.request')" wire:navigate>
-                        {{ __('Forgot your password?') }}
-                    </flux:link>
-                @endif
             </div>
 
             <!-- Remember Me -->
-            <flux:checkbox name="remember" :label="__('Remember me')" :checked="old('remember')" />
+            <x-cinema.checkbox name="remember" :label="__('Remember me')" :checked="old('remember')" />
 
             <div class="flex items-center justify-end">
-                <flux:button variant="primary" type="submit" class="w-full" data-test="login-button">
+                <x-cinema.button type="submit" class="w-full" data-test="login-button">
                     {{ __('Log in') }}
-                </flux:button>
+                </x-cinema.button>
             </div>
         </form>
 
     </div>
-</x-layouts::auth>
+</x-layouts::auth.cinema>

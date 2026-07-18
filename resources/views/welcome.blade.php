@@ -303,20 +303,15 @@
         }
         .footer .stack { letter-spacing: .04em; }
 
-        /* ---- Entrance choreography ----------------------------------- */
-        [data-rise] {
-            opacity: 0;
-            transform: translateY(16px);
-            animation: rise .9s cubic-bezier(.2,.8,.2,1) forwards;
-            animation-delay: var(--d, 0s);
-        }
-        @keyframes rise {
-            to { opacity: 1; transform: none; }
+        /* ---- Focus visibility — consistent brand ring, never white -- */
+        a:focus-visible,
+        button:focus-visible {
+            outline: 2px solid color-mix(in oklab, var(--grad-a) 50%, var(--grad-b));
+            outline-offset: 4px;
         }
 
         @media (prefers-reduced-motion: reduce) {
             .glow, .grain, .status .dot { animation: none; }
-            [data-rise] { animation: none; opacity: 1; transform: none; }
         }
 
         @media (max-width: 760px) {
@@ -343,7 +338,7 @@
         <span class="frame br"></span>
 
         <div class="shell">
-            <header class="topbar" data-rise style="--d:.05s">
+            <header class="topbar">
                 <a href="{{ route('home') }}" class="brand">
                     <x-app-logo-icon />
                     Movix
@@ -355,21 +350,21 @@
             </header>
 
             <main class="hero">
-                <span class="eyebrow" data-rise style="--d:.15s">Private movie streaming</span>
+                <span class="eyebrow">Private movie streaming</span>
 
-                <h1 data-rise style="--d:.25s">
+                <h1>
                     Your library,<br>
                     <span class="accent">streaming</span> from<br>
                     your own machine.
                 </h1>
 
-                <p class="lede" data-rise style="--d:.4s">
+                <p class="lede">
                     Movix turns a folder of videos into a private, browsable cinema. Finder-style
                     navigation, in-browser playback with instant seeking, and passwordless sign-in —
                     no transcoding, no cloud, nothing leaving your machine.
                 </p>
 
-                <div class="actions" data-rise style="--d:.55s">
+                <div class="actions">
                     @auth
                         <a href="{{ route('dashboard') }}" class="btn">
                             Open library
@@ -389,7 +384,7 @@
                 </div>
             </main>
 
-            <section class="rail" data-rise style="--d:.7s" aria-label="Features">
+            <section class="rail" aria-label="Features">
                 <div class="cell">
                     <div class="k">01</div>
                     <div class="t">Finder-style browser</div>
@@ -412,7 +407,7 @@
                 </div>
             </section>
 
-            <footer class="footer" data-rise style="--d:.85s">
+            <footer class="footer">
                 <span class="stack">Laravel · Livewire · Flux · Tailwind</span>
                 <span>© {{ date('Y') }} Movix — streams straight from disk</span>
             </footer>

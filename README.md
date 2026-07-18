@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <img src="art/library.png" alt="Movix library" width="100%">
+  <img src="art/player.png" alt="Movix streaming a video edge-to-edge" width="100%">
 </p>
 
 ---
@@ -45,9 +45,9 @@ Built on the Laravel Livewire stack with a Finder-style interface, secured by pa
 | :-----: | :-------------: |
 | ![Library](art/library.png) | ![Folder](art/folder.png) |
 
-| Player | Sign in |
-| :----: | :-----: |
-| ![Player](art/player.png) | ![Login](art/login.png) |
+| Landing page | Sign in |
+| :----------: | :-----: |
+| ![Landing](art/landing.png) | ![Login](art/login.png) |
 
 ## Tech stack
 
@@ -107,6 +107,8 @@ storage/app/movies/
 ```
 
 Movix reads from the dedicated `movies` filesystem disk (configured in `config/filesystems.php`). Folders you create in the app map directly to directories here, so you can organize your library either way.
+
+> **Tip:** `storage/app/movies` can also be a symlink to a directory anywhere on your machine — point it at an existing media library on another drive or volume without copying a single file.
 
 ## Testing
 
