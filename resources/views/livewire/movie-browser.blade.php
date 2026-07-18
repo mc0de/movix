@@ -23,6 +23,8 @@
             playing: $wire.entangle('playing'),
             positions: JSON.parse(localStorage.getItem('movix.positions') || '{}'),
             saveTimer: null,
+            // Whether starting playback pushed a history entry we can pop to close.
+            pushedHistory: false,
             get url() {
                 return this.playing
                     ? '{{ url('movies') }}/' + this.playing.split('/').map(encodeURIComponent).join('/')
@@ -32,6 +34,12 @@
                 // Reopen the video that was playing before an accidental refresh (a deliberate close clears this key).
                 const last = localStorage.getItem('movix.playing');
                 if (last && this.positions[last] && ! this.playing) { this.$wire.play(last); }
+                // Track when playback begins from a closed player: that transition is the one
+                // that adds a history entry, so closing can pop it to land back on the folder.
+                this.$watch('playing', (value, previous) => {
+                    if (value && ! previous) { this.pushedHistory = true; }
+                    if (! value) { this.pushedHistory = false; }
+                });
             },
             resume() { this.$nextTick(() => this.$refs.video?.play().catch(() => {})); },
             stop() {
@@ -70,7 +78,16 @@
                 this.savePosition();
                 this.stopSaving();
                 localStorage.removeItem('movix.playing');
-                this.playing = null;
+                this.stop();
+                // Pop the history entry that playback added so Close and ESC behave like Back,
+                // landing on the current folder. Fall back to clearing state when there is
+                // nothing to pop (e.g. a video opened directly via a shared/bookmarked URL).
+                if (this.pushedHistory) {
+                    this.pushedHistory = false;
+                    window.history.back();
+                } else {
+                    this.playing = null;
+                }
             },
         }"
         x-effect="url ? resume() : stop()"

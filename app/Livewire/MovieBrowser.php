@@ -42,7 +42,12 @@ class MovieBrowser extends Component
 
     /**
      * The file currently selected for playback, relative to the disk root.
+     *
+     * Tracked in the URL so starting playback pushes a history entry: the
+     * browser's Back button then returns to the current folder (closing the
+     * player) instead of jumping straight to the previously visited folder.
      */
+    #[Url(history: true)]
     public ?string $playing = null;
 
     /**
