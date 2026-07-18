@@ -13,6 +13,17 @@ use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 
+/**
+ * @property-read array<int, array{name: string, path: string, count: int}> $directories
+ * @property-read array<int, array{name: string, path: string, size: string, kind: string}> $files
+ * @property-read array<int, string> $visiblePaths
+ * @property-read bool $allVisibleSelected
+ * @property-read bool $someVisibleSelected
+ * @property-read array<int, array{name: string, path: string}> $breadcrumbs
+ * @property-read string|null $parent
+ * @property-read array<int, string> $moveFolderOptions
+ * @property-read bool $deletingDirectory
+ */
 #[Title('Movies')]
 class MovieBrowser extends Component
 {
