@@ -81,7 +81,7 @@ class Security extends Component
                 $disableTwoFactorAuthentication(auth()->user());
             }
 
-            $this->twoFactorEnabled = auth()->user()->hasEnabledTwoFactorAuthentication();
+            $this->twoFactorEnabled     = auth()->user()->hasEnabledTwoFactorAuthentication();
             $this->requiresConfirmation = Features::optionEnabled(Features::twoFactorAuthentication(), 'confirm');
         }
 
@@ -100,7 +100,7 @@ class Security extends Component
         try {
             $validated = $this->validate([
                 'current_password' => $this->currentPasswordRules(),
-                'password' => $this->passwordRules(),
+                'password'         => $this->passwordRules(),
             ]);
         } catch (ValidationException $e) {
             $this->reset('current_password', 'password', 'password_confirmation');
@@ -127,10 +127,10 @@ class Security extends Component
             ->latest()
             ->get()
             ->map(fn ($passkey) => [
-                'id' => $passkey->id,
-                'name' => $passkey->name,
-                'authenticator' => $passkey->authenticator,
-                'created_at_diff' => $passkey->created_at->diffForHumans(),
+                'id'                => $passkey->id,
+                'name'              => $passkey->name,
+                'authenticator'     => $passkey->authenticator,
+                'created_at_diff'   => $passkey->created_at->diffForHumans(),
                 'last_used_at_diff' => $passkey->last_used_at?->diffForHumans(),
             ])
             ->all();
@@ -143,9 +143,9 @@ class Security extends Component
     {
         $passkey = Auth::user()->passkeys()->findOrFail($passkeyId);
 
-        $this->deletingPasskeyId = $passkey->id;
+        $this->deletingPasskeyId   = $passkey->id;
         $this->deletingPasskeyName = $passkey->name;
-        $this->showDeleteModal = true;
+        $this->showDeleteModal     = true;
     }
 
     /**
@@ -157,7 +157,7 @@ class Security extends Component
             return;
         }
 
-        $user = Auth::user();
+        $user    = Auth::user();
         $passkey = $user->passkeys()->findOrFail($this->deletingPasskeyId);
 
         $deletePasskey($user, $passkey);
@@ -171,8 +171,8 @@ class Security extends Component
      */
     public function closeDeleteModal(): void
     {
-        $this->showDeleteModal = false;
-        $this->deletingPasskeyId = null;
+        $this->showDeleteModal     = false;
+        $this->deletingPasskeyId   = null;
         $this->deletingPasskeyName = '';
     }
 
@@ -200,7 +200,7 @@ class Security extends Component
         $user = auth()->user();
 
         try {
-            $this->qrCodeSvg = $user?->twoFactorQrCodeSvg();
+            $this->qrCodeSvg      = $user?->twoFactorQrCodeSvg();
             $this->manualSetupKey = decrypt($user->two_factor_secret);
         } catch (Exception) {
             $this->addError('setupData', 'Failed to fetch setup data.');
@@ -289,24 +289,24 @@ class Security extends Component
     {
         if ($this->twoFactorEnabled) {
             return [
-                'title' => __('Two-factor authentication enabled'),
+                'title'       => __('Two-factor authentication enabled'),
                 'description' => __('Two-factor authentication is now enabled. Scan the QR code or enter the setup key in your authenticator app.'),
-                'buttonText' => __('Close'),
+                'buttonText'  => __('Close'),
             ];
         }
 
         if ($this->showVerificationStep) {
             return [
-                'title' => __('Verify authentication code'),
+                'title'       => __('Verify authentication code'),
                 'description' => __('Enter the 6-digit code from your authenticator app.'),
-                'buttonText' => __('Continue'),
+                'buttonText'  => __('Continue'),
             ];
         }
 
         return [
-            'title' => __('Enable two-factor authentication'),
+            'title'       => __('Enable two-factor authentication'),
             'description' => __('To finish enabling two-factor authentication, scan the QR code or enter the setup key in your authenticator app.'),
-            'buttonText' => __('Continue'),
+            'buttonText'  => __('Continue'),
         ];
     }
 }

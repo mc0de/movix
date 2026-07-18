@@ -10,7 +10,7 @@ it('renders a deterministic identicon from the name', function () {
 });
 
 it('produces the same grid and color for the same name', function () {
-    $first = new UserAvatar('David Lun');
+    $first  = new UserAvatar('David Lun');
     $second = new UserAvatar('David Lun');
 
     expect($second->cells)->toBe($first->cells)

@@ -13,4 +13,4 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('movies.stream');
 });
 
-require __DIR__.'/settings.php';
+require __DIR__ . '/settings.php';

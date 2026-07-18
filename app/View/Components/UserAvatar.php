@@ -28,8 +28,8 @@ class UserAvatar extends Component
     {
         $hash = md5(strtolower(trim($name)));
 
-        $hue = (int) (hexdec(substr($hash, 0, 2)) / 255 * 360);
-        $this->color = "hsl({$hue} 100% 62%)";
+        $hue              = (int) (hexdec(substr($hash, 0, 2)) / 255 * 360);
+        $this->color      = "hsl({$hue} 100% 62%)";
         $this->background = "hsl({$hue} 30% 9%)";
 
         $this->cells = $this->buildCells($hash);
@@ -47,8 +47,8 @@ class UserAvatar extends Component
 
         for ($row = 0; $row < 5; $row++) {
             for ($col = 0; $col < 3; $col++) {
-                $filled = ($bytes[$row * 3 + $col] % 2) === 0;
-                $cells[$row * 5 + $col] = $filled;
+                $filled                       = ($bytes[$row * 3 + $col] % 2) === 0;
+                $cells[$row * 5 + $col]       = $filled;
                 $cells[$row * 5 + (4 - $col)] = $filled;
             }
         }

@@ -69,9 +69,9 @@ class CreateUser extends Command
         $user = spin(
             message: 'Creating user...',
             callback: fn () => User::create([
-                'name' => $responses['name'],
-                'email' => $responses['email'],
-                'password' => Hash::make($responses['password']),
+                'name'              => $responses['name'],
+                'email'             => $responses['email'],
+                'password'          => Hash::make($responses['password']),
                 'email_verified_at' => $responses['verified'] ? now() : null,
             ]),
         );
@@ -97,8 +97,8 @@ class CreateUser extends Command
     protected function validateField(string $field, string $value): ?string
     {
         $rules = [
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:users,email'],
+            'name'     => ['required', 'string', 'max:255'],
+            'email'    => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', Password::default()],
         ];
 

@@ -117,8 +117,8 @@ class MovieBrowser extends Component
 
         $directories = collect($disk->directories($this->path))
             ->map(fn (string $directory) => [
-                'name' => basename($directory),
-                'path' => $directory,
+                'name'  => basename($directory),
+                'path'  => $directory,
                 'count' => count($disk->files($directory)) + count($disk->directories($directory)),
             ])
             ->when($this->search !== '', fn ($directories) => $directories->filter(
@@ -149,11 +149,11 @@ class MovieBrowser extends Component
                 $bytes = $disk->size($file);
 
                 return [
-                    'name' => basename($file),
-                    'path' => $file,
+                    'name'  => basename($file),
+                    'path'  => $file,
                     'bytes' => $bytes,
-                    'size' => Number::fileSize($bytes, precision: 1),
-                    'kind' => Str::upper(Str::afterLast($file, '.')).' Video',
+                    'size'  => Number::fileSize($bytes, precision: 1),
+                    'kind'  => Str::upper(Str::afterLast($file, '.')) . ' Video',
                 ];
             })
             ->when($this->search !== '', fn ($files) => $files->filter(
@@ -163,8 +163,8 @@ class MovieBrowser extends Component
         $descending = $this->sortDirection === 'desc';
 
         $sorted = match ($this->sortColumn) {
-            'size' => $files->sortBy('bytes', SORT_NUMERIC, $descending),
-            'kind' => $files->sortBy(fn (array $file) => $file['kind'].' '.$file['name'], SORT_NATURAL | SORT_FLAG_CASE, $descending),
+            'size'  => $files->sortBy('bytes', SORT_NUMERIC, $descending),
+            'kind'  => $files->sortBy(fn (array $file) => $file['kind'] . ' ' . $file['name'], SORT_NATURAL | SORT_FLAG_CASE, $descending),
             default => $files->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE, $descending),
         };
 
@@ -213,12 +213,12 @@ class MovieBrowser extends Component
     #[Computed]
     public function breadcrumbs(): array
     {
-        $crumbs = [];
+        $crumbs      = [];
         $accumulated = '';
 
         foreach (array_filter(explode('/', $this->path)) as $segment) {
-            $accumulated = ltrim($accumulated.'/'.$segment, '/');
-            $crumbs[] = ['name' => $segment, 'path' => $accumulated];
+            $accumulated = ltrim($accumulated . '/' . $segment, '/');
+            $crumbs[]    = ['name' => $segment, 'path' => $accumulated];
         }
 
         return $crumbs;
@@ -249,7 +249,7 @@ class MovieBrowser extends Component
 
         return collect(Storage::disk('movies')->allDirectories())
             ->reject(fn (string $folder) => collect($targets)->contains(
-                fn (string $target) => $folder === $target || Str::startsWith($folder, $target.'/')
+                fn (string $target) => $folder === $target || Str::startsWith($folder, $target . '/')
             ))
             ->sort()
             ->values()
@@ -341,7 +341,7 @@ class MovieBrowser extends Component
         if ($this->sortColumn === $column) {
             $this->sortDirection = $this->sortDirection === 'asc' ? 'desc' : 'asc';
         } else {
-            $this->sortColumn = $column;
+            $this->sortColumn    = $column;
             $this->sortDirection = 'asc';
         }
 
@@ -357,7 +357,7 @@ class MovieBrowser extends Component
             return;
         }
 
-        $this->sortColumn = $column;
+        $this->sortColumn    = $column;
         $this->sortDirection = $direction === 'desc' ? 'desc' : 'asc';
 
         $this->refreshListing();
@@ -369,7 +369,7 @@ class MovieBrowser extends Component
     public function updatedUploads(): void
     {
         $this->validate([
-            'uploads' => ['array'],
+            'uploads'   => ['array'],
             'uploads.*' => ['required', 'file', 'extensions:mp4,webm,ogg,mov'],
         ]);
 
@@ -409,7 +409,7 @@ class MovieBrowser extends Component
             return;
         }
 
-        $destination = ltrim($this->path.'/'.$this->newFolderName, '/');
+        $destination = ltrim($this->path . '/' . $this->newFolderName, '/');
 
         if ($this->pathExists($destination)) {
             $this->addError('newFolderName', __('An item with that name already exists.'));
@@ -430,8 +430,8 @@ class MovieBrowser extends Component
     public function startRename(string $path): void
     {
         $this->resetErrorBag();
-        $this->renameTarget = $path;
-        $this->renameValue = basename($path);
+        $this->renameTarget    = $path;
+        $this->renameValue     = basename($path);
         $this->showRenameModal = true;
     }
 
@@ -452,9 +452,9 @@ class MovieBrowser extends Component
             return;
         }
 
-        $target = (string) $this->renameTarget;
-        $directory = Str::contains($target, '/') ? Str::beforeLast($target, '/') : '';
-        $destination = ltrim($directory.'/'.$this->renameValue, '/');
+        $target      = (string) $this->renameTarget;
+        $directory   = Str::contains($target, '/') ? Str::beforeLast($target, '/') : '';
+        $destination = ltrim($directory . '/' . $this->renameValue, '/');
 
         if ($destination !== $target && $this->pathExists($destination)) {
             $this->addError('renameValue', __('An item with that name already exists.'));
@@ -474,9 +474,9 @@ class MovieBrowser extends Component
     public function startMove(string $path): void
     {
         $this->resetErrorBag();
-        $this->moveTargets = [$path];
+        $this->moveTargets     = [$path];
         $this->moveDestination = Str::contains($path, '/') ? Str::beforeLast($path, '/') : '';
-        $this->showMoveModal = true;
+        $this->showMoveModal   = true;
     }
 
     /**
@@ -489,9 +489,9 @@ class MovieBrowser extends Component
         }
 
         $this->resetErrorBag();
-        $this->moveTargets = $this->selected;
+        $this->moveTargets     = $this->selected;
         $this->moveDestination = $this->path;
-        $this->showMoveModal = true;
+        $this->showMoveModal   = true;
     }
 
     /**
@@ -514,7 +514,7 @@ class MovieBrowser extends Component
         foreach ($this->moveTargets as $target) {
             $this->assertSafe($target);
 
-            $destination = ltrim($this->moveDestination.'/'.basename($target), '/');
+            $destination = ltrim($this->moveDestination . '/' . basename($target), '/');
 
             if ($destination === $target) {
                 continue;
@@ -540,7 +540,7 @@ class MovieBrowser extends Component
      */
     public function confirmDelete(string $path, bool $isDirectory = false): void
     {
-        $this->deleteTargets = [$path];
+        $this->deleteTargets   = [$path];
         $this->showDeleteModal = true;
     }
 
@@ -553,7 +553,7 @@ class MovieBrowser extends Component
             return;
         }
 
-        $this->deleteTargets = $this->selected;
+        $this->deleteTargets   = $this->selected;
         $this->showDeleteModal = true;
     }
 
@@ -573,7 +573,7 @@ class MovieBrowser extends Component
                 $disk->delete($target);
             }
 
-            if ($this->playing === $target || Str::startsWith((string) $this->playing, $target.'/')) {
+            if ($this->playing === $target || Str::startsWith((string) $this->playing, $target . '/')) {
                 $this->reset('playing');
             }
         }
@@ -613,14 +613,14 @@ class MovieBrowser extends Component
      */
     private function uniqueName(string $directory, string $name): string
     {
-        $disk = Storage::disk('movies');
-        $extension = Str::contains($name, '.') ? '.'.Str::afterLast($name, '.') : '';
-        $base = Str::beforeLast($name, '.');
+        $disk      = Storage::disk('movies');
+        $extension = Str::contains($name, '.') ? '.' . Str::afterLast($name, '.') : '';
+        $base      = Str::beforeLast($name, '.');
         $candidate = $name;
-        $counter = 1;
+        $counter   = 1;
 
-        while ($disk->exists(ltrim($directory.'/'.$candidate, '/'))) {
-            $candidate = $base.' ('.$counter.')'.$extension;
+        while ($disk->exists(ltrim($directory . '/' . $candidate, '/'))) {
+            $candidate = $base . ' (' . $counter . ')' . $extension;
             $counter++;
         }
 
@@ -634,8 +634,8 @@ class MovieBrowser extends Component
     {
         if ($this->playing === $from) {
             $this->playing = $to;
-        } elseif (Str::startsWith((string) $this->playing, $from.'/')) {
-            $this->playing = $to.Str::after((string) $this->playing, $from);
+        } elseif (Str::startsWith((string) $this->playing, $from . '/')) {
+            $this->playing = $to . Str::after((string) $this->playing, $from);
         }
 
         $this->refreshListing();
