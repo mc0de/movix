@@ -79,6 +79,12 @@ composer setup
 
 `composer setup` runs `composer install`, copies `.env`, generates the app key, migrates the database, and builds the frontend in one step.
 
+The shipped `.env.example` has an empty `APP_KEY`. `composer setup` generates one for you; if you set things up manually instead, generate it before serving the app:
+
+```bash
+php artisan key:generate
+```
+
 Create your first account:
 
 ```bash
