@@ -94,6 +94,42 @@ test('moves a file into another folder', function () {
     Storage::disk('movies')->assertMissing('movie.mp4');
 });
 
+test('a colliding target leaves the whole batch unmoved', function () {
+    Storage::disk('movies')->put('one.mp4', 'data');
+    Storage::disk('movies')->put('two.mp4', 'data');
+    Storage::disk('movies')->put('Archive/two.mp4', 'existing');
+
+    Livewire::test(MovieBrowser::class)
+        ->set('selected', ['one.mp4', 'two.mp4'])
+        ->call('startMoveSelected')
+        ->set('moveDestination', 'Archive')
+        ->call('move')
+        ->assertHasErrors('moveDestination')
+        ->assertSet('showMoveModal', true);
+
+    // Neither target moved: the collision is detected before anything is touched.
+    Storage::disk('movies')->assertExists('one.mp4');
+    Storage::disk('movies')->assertExists('two.mp4');
+    Storage::disk('movies')->assertMissing('Archive/one.mp4');
+});
+
+test('two targets that share a name cannot be moved into the same folder', function () {
+    Storage::disk('movies')->put('A/movie.mp4', 'a');
+    Storage::disk('movies')->put('B/movie.mp4', 'b');
+    Storage::disk('movies')->makeDirectory('Archive');
+
+    Livewire::test(MovieBrowser::class)
+        ->set('selected', ['A/movie.mp4', 'B/movie.mp4'])
+        ->call('startMoveSelected')
+        ->set('moveDestination', 'Archive')
+        ->call('move')
+        ->assertHasErrors('moveDestination');
+
+    Storage::disk('movies')->assertExists('A/movie.mp4');
+    Storage::disk('movies')->assertExists('B/movie.mp4');
+    Storage::disk('movies')->assertMissing('Archive/movie.mp4');
+});
+
 test('move folder options exclude the target and its descendants', function () {
     Storage::disk('movies')->makeDirectory('Parent/Child');
     Storage::disk('movies')->makeDirectory('Other');
@@ -111,7 +147,7 @@ test('deletes a file', function () {
     Storage::disk('movies')->put('movie.mp4', 'data');
 
     Livewire::test(MovieBrowser::class)
-        ->call('confirmDelete', 'movie.mp4', false)
+        ->call('confirmDelete', 'movie.mp4')
         ->call('delete')
         ->assertSet('showDeleteModal', false);
 
@@ -122,7 +158,7 @@ test('deletes a folder and its contents', function () {
     Storage::disk('movies')->put('Season 1/ep1.mp4', 'data');
 
     Livewire::test(MovieBrowser::class)
-        ->call('confirmDelete', 'Season 1', true)
+        ->call('confirmDelete', 'Season 1')
         ->call('delete');
 
     Storage::disk('movies')->assertMissing('Season 1/ep1.mp4');
@@ -135,7 +171,7 @@ test('deleting the playing file stops playback', function () {
     Livewire::test(MovieBrowser::class)
         ->call('play', 'movie.mp4')
         ->assertSet('playing', 'movie.mp4')
-        ->call('confirmDelete', 'movie.mp4', false)
+        ->call('confirmDelete', 'movie.mp4')
         ->call('delete')
         ->assertSet('playing', null);
 });
@@ -168,9 +204,23 @@ test('renaming the playing file keeps it playing under the new path', function (
 
 test('mutations reject path traversal', function () {
     Livewire::test(MovieBrowser::class)
-        ->call('confirmDelete', '../secret.mp4', false)
+        ->call('confirmDelete', '../secret.mp4')
         ->call('delete')
         ->assertStatus(404);
+});
+
+test('a traversal path from the url falls back to the root', function () {
+    Storage::disk('movies')->put('movie.mp4', 'data');
+
+    Livewire::test(MovieBrowser::class, ['path' => '../../'])
+        ->assertSet('path', '')
+        ->assertSet('files.0.name', 'movie.mp4');
+});
+
+test('open ignores a traversal path and stays at the root', function () {
+    Livewire::test(MovieBrowser::class)
+        ->call('open', '../secret')
+        ->assertSet('path', '');
 });
 
 test('creates a folder in the current location', function () {

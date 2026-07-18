@@ -312,7 +312,7 @@
                     <div class="flex items-center justify-end gap-0.5 opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
                         <flux:button size="xs" variant="ghost" icon="pencil-square" wire:click="startRename('{{ $directory['path'] }}')" aria-label="{{ __('Rename') }}" />
                         <flux:button size="xs" variant="ghost" icon="folder-arrow-down" wire:click="startMove('{{ $directory['path'] }}')" aria-label="{{ __('Move') }}" />
-                        <flux:button size="xs" variant="ghost" icon="trash" wire:click="confirmDelete('{{ $directory['path'] }}', true)" aria-label="{{ __('Delete') }}" />
+                        <flux:button size="xs" variant="ghost" icon="trash" wire:click="confirmDelete('{{ $directory['path'] }}')" aria-label="{{ __('Delete') }}" />
                     </div>
                 </div>
             @endforeach
@@ -386,7 +386,7 @@
                     ])>
                         <flux:button size="xs" variant="ghost" icon="pencil-square" wire:click="startRename('{{ $file['path'] }}')" aria-label="{{ __('Rename') }}" @class(['text-white' => $isPlaying]) />
                         <flux:button size="xs" variant="ghost" icon="folder-arrow-down" wire:click="startMove('{{ $file['path'] }}')" aria-label="{{ __('Move') }}" @class(['text-white' => $isPlaying]) />
-                        <flux:button size="xs" variant="ghost" icon="trash" wire:click="confirmDelete('{{ $file['path'] }}', false)" aria-label="{{ __('Delete') }}" @class(['text-white' => $isPlaying]) />
+                        <flux:button size="xs" variant="ghost" icon="trash" wire:click="confirmDelete('{{ $file['path'] }}')" aria-label="{{ __('Delete') }}" @class(['text-white' => $isPlaying]) />
                     </div>
                 </div>
             @endforeach

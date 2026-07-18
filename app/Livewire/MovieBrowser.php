@@ -275,11 +275,22 @@ class MovieBrowser extends Component
     }
 
     /**
+     * Discard a browsed path that tries to escape the disk root, falling back
+     * to the root. Runs on every request (after the URL-bound `path` is
+     * hydrated, before render) so a crafted `?path=../` resolves to a clean
+     * root listing instead of an unhandled path-traversal exception.
+     */
+    public function booted(): void
+    {
+        $this->path = $this->withinRoot($this->path);
+    }
+
+    /**
      * Navigate into the given folder.
      */
     public function open(string $path): void
     {
-        $this->path = $path;
+        $this->path = $this->withinRoot($path);
         $this->reset('playing', 'selected', 'search');
     }
 
@@ -516,6 +527,11 @@ class MovieBrowser extends Component
 
         $disk = Storage::disk('movies');
 
+        // Resolve every target to its destination and validate the whole batch
+        // up front — including collisions between two targets that share a
+        // basename — so a mid-batch failure cannot leave the move half-applied.
+        $moves = [];
+
         foreach ($this->moveTargets as $target) {
             $this->assertSafe($target);
 
@@ -525,12 +541,16 @@ class MovieBrowser extends Component
                 continue;
             }
 
-            if ($this->pathExists($destination)) {
+            if ($this->pathExists($destination) || in_array($destination, $moves, true)) {
                 $this->addError('moveDestination', __('An item named ":name" already exists in that folder.', ['name' => basename($target)]));
 
                 return;
             }
 
+            $moves[$target] = $destination;
+        }
+
+        foreach ($moves as $target => $destination) {
             $disk->move($target, $destination);
             $this->afterMutation($target, $destination);
         }
@@ -543,7 +563,7 @@ class MovieBrowser extends Component
     /**
      * Open the delete confirmation dialog for a single file or folder.
      */
-    public function confirmDelete(string $path, bool $isDirectory = false): void
+    public function confirmDelete(string $path): void
     {
         $this->deleteTargets   = [$path];
         $this->showDeleteModal = true;
@@ -601,6 +621,15 @@ class MovieBrowser extends Component
         if ($path === null || $path === '' || Str::contains($path, '..')) {
             abort(404);
         }
+    }
+
+    /**
+     * Resolve a browsed path to itself, or to the disk root when it attempts
+     * to traverse outside the "movies" disk.
+     */
+    private function withinRoot(string $path): string
+    {
+        return Str::contains($path, '..') ? '' : $path;
     }
 
     /**
