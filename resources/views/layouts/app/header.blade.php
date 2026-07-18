@@ -9,19 +9,7 @@
 
             <x-app-logo href="{{ route('dashboard') }}" wire:navigate />
 
-            <flux:navbar class="-mb-px max-lg:hidden">
-                <flux:navbar.item icon="layout-grid" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>
-                    {{ __('Dashboard') }}
-                </flux:navbar.item>
-            </flux:navbar>
-
             <flux:spacer />
-
-            <flux:navbar class="me-1.5 space-x-0.5 rtl:space-x-reverse py-0!">
-                <flux:tooltip :content="__('Search')" position="bottom">
-                    <flux:navbar.item class="!h-10 [&>div>svg]:size-5" icon="magnifying-glass" href="#" :label="__('Search')" />
-                </flux:tooltip>
-            </flux:navbar>
 
             <x-desktop-user-menu />
         </flux:header>

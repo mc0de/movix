@@ -1,6 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 42" {{ $attributes }}>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 29 20" fill="none" {{ $attributes }}>
+    <defs>
+        <linearGradient id="movix-logo" x1="0" y1="0" x2="29" y2="20" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#7C3AED" />
+            <stop offset="1" stop-color="#EC4899" />
+        </linearGradient>
+    </defs>
+    <rect width="29" height="20" rx="6" fill="url(#movix-logo)" />
     <path
-        fill="currentColor"
-        d="M10 6.9c0-2.2 2.4-3.55 4.28-2.42l25.02 15.1c1.82 1.1 1.82 3.74 0 4.84L14.28 39.52C12.4 40.65 10 39.3 10 37.1V6.9Z"
+        fill="#fff"
+        d="M14.5 4 16.03 7.9 20.21 8.15 16.98 10.8 18.03 14.85 14.5 12.6 10.97 14.85 12.03 10.8 8.79 8.15 12.97 7.9Z"
     />
 </svg>
