@@ -6,8 +6,5 @@
         </linearGradient>
     </defs>
     <rect width="29" height="20" rx="6" fill="url(#movix-logo)" />
-    <path
-        fill="#fff"
-        d="M14.5 4 16.03 7.9 20.21 8.15 16.98 10.8 18.03 14.85 14.5 12.6 10.97 14.85 12.03 10.8 8.79 8.15 12.97 7.9Z"
-    />
+    <path fill="#fff" d="M10.5 5 18.5 5 22.5 8 14.5 16.4 6.5 8Z" />
 </svg>
