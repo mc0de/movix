@@ -30,6 +30,21 @@ class MovieBrowser extends Component
     use WithFileUploads;
 
     /**
+     * The file currently selected for playback, relative to the disk root.
+     *
+     * Tracked in the URL so starting playback pushes a history entry: the
+     * browser's Back button then returns to the current folder (closing the
+     * player) instead of jumping straight to the previously visited folder.
+     *
+     * Declared before `$path` on purpose: Livewire pushes one history entry
+     * per changed URL property, in declaration order. Opening a folder while
+     * playing must push "player closed" before "folder changed", otherwise
+     * Back lands on a stray entry pairing the new folder with the old video.
+     */
+    #[Url(history: true)]
+    public ?string $playing = null;
+
+    /**
      * The current folder being browsed, relative to the "movies" disk root.
      */
     #[Url(history: true)]
@@ -39,16 +54,6 @@ class MovieBrowser extends Component
      * A case-insensitive filter applied to the current folder's contents.
      */
     public string $search = '';
-
-    /**
-     * The file currently selected for playback, relative to the disk root.
-     *
-     * Tracked in the URL so starting playback pushes a history entry: the
-     * browser's Back button then returns to the current folder (closing the
-     * player) instead of jumping straight to the previously visited folder.
-     */
-    #[Url(history: true)]
-    public ?string $playing = null;
 
     /**
      * The column files are sorted by: "name", "kind", or "size".

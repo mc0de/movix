@@ -23,8 +23,9 @@
             playing: $wire.entangle('playing'),
             positions: JSON.parse(localStorage.getItem('movix.positions') || '{}'),
             saveTimer: null,
-            // Whether starting playback pushed a history entry we can pop to close.
-            pushedHistory: false,
+            // How many history entries the open player sits above the folder it was opened from.
+            // Livewire pushes an entry per video played, so switching videos stacks them up.
+            depth: 0,
             get url() {
                 return this.playing
                     ? '{{ url('movies') }}/' + this.playing.split('/').map(encodeURIComponent).join('/')
@@ -34,12 +35,18 @@
                 // Reopen the video that was playing before an accidental refresh (a deliberate close clears this key).
                 const last = localStorage.getItem('movix.playing');
                 if (last && this.positions[last] && ! this.playing) { this.$wire.play(last); }
-                // Track when playback begins from a closed player: that transition is the one
-                // that adds a history entry, so closing can pop it to land back on the folder.
-                this.$watch('playing', (value, previous) => {
-                    if (value && ! previous) { this.pushedHistory = true; }
-                    if (! value) { this.pushedHistory = false; }
-                });
+                this.depth = window.history.state?.movixPlayerDepth ?? 0;
+                // Defer until Livewire has written this change to the browser history.
+                this.$watch('playing', (value) => setTimeout(() => this.trackDepth(value)));
+            },
+            trackDepth(value) {
+                if (! value) { this.depth = 0; return; }
+                const state = window.history.state ?? {};
+                // Revisited via Back/Forward: the entry already knows its depth.
+                if (state.movixPlayerDepth) { this.depth = state.movixPlayerDepth; return; }
+                // A fresh entry Livewire just pushed for this video: one level deeper than the last.
+                this.depth += 1;
+                window.history.replaceState({ ...state, movixPlayerDepth: this.depth }, '');
             },
             resume() { this.$nextTick(() => this.$refs.video?.play().catch(() => {})); },
             stop() {
@@ -79,12 +86,12 @@
                 this.stopSaving();
                 localStorage.removeItem('movix.playing');
                 this.stop();
-                // Pop the history entry that playback added so Close and ESC behave like Back,
-                // landing on the current folder. Fall back to clearing state when there is
-                // nothing to pop (e.g. a video opened directly via a shared/bookmarked URL).
-                if (this.pushedHistory) {
-                    this.pushedHistory = false;
-                    window.history.back();
+                // Pop every history entry playback added so Close and ESC land on the folder
+                // the player was opened from, not a previously played video. Fall back to
+                // clearing state when there is nothing to pop (e.g. a shared/bookmarked URL).
+                if (this.depth > 0) {
+                    window.history.go(-this.depth);
+                    this.depth = 0;
                 } else {
                     this.playing = null;
                 }
