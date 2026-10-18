@@ -91,6 +91,12 @@ Create your first account:
 php artisan user:create
 ```
 
+List existing accounts any time with:
+
+```bash
+php artisan user:list
+```
+
 Then start the dev server:
 
 ```bash
