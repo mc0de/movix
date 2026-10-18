@@ -64,3 +64,49 @@ select:focus[data-flux-control] {
 /* \[:where(&)\]:size-4 {
     @apply size-4;
 } */
+
+/* macOS-style context menu: translucent vibrancy panel, compact rows, accent-blue highlight. */
+[data-flux-menu].macos-menu {
+    @apply min-w-40 rounded-[10px] border-black/10 bg-white/75 p-[5px] shadow-[0_10px_30px_rgb(0_0_0/0.18),0_0_0_0.5px_rgb(0_0_0/0.12)] backdrop-blur-xl backdrop-saturate-150;
+}
+
+.dark [data-flux-menu].macos-menu {
+    @apply border-white/10 bg-neutral-800/70 shadow-[0_10px_30px_rgb(0_0_0/0.5),0_0_0_0.5px_rgb(0_0_0/0.6)];
+}
+
+.macos-menu [data-flux-menu-item] {
+    @apply rounded-[5px] px-2 py-[3px] text-[13px] font-normal text-neutral-900;
+}
+
+.dark .macos-menu [data-flux-menu-item] {
+    @apply text-neutral-100;
+}
+
+.macos-menu [data-flux-menu-item] [data-flux-menu-item-icon] {
+    @apply me-1.5 size-4 text-neutral-500;
+}
+
+.dark .macos-menu [data-flux-menu-item] [data-flux-menu-item-icon] {
+    @apply text-neutral-400;
+}
+
+.macos-menu [data-flux-menu-item][data-active],
+.dark .macos-menu [data-flux-menu-item][data-active] {
+    @apply bg-[#0A84FF] text-white;
+}
+
+.macos-menu [data-flux-menu-item][data-active] [data-flux-menu-item-icon] {
+    @apply text-white;
+}
+
+.macos-menu [data-flux-menu-separator] {
+    @apply mx-2 my-[5px];
+}
+
+.macos-menu [data-flux-menu-separator] [data-flux-separator] {
+    @apply bg-black/10!;
+}
+
+.dark .macos-menu [data-flux-menu-separator] [data-flux-separator] {
+    @apply bg-white/10!;
+}

@@ -213,7 +213,7 @@
         @endif
 
         {{-- List header --}}
-        <div class="grid grid-cols-[1.75rem_1fr_9rem_6rem_6rem] items-center gap-3 border-b border-neutral-800 px-4 py-2 text-xs font-medium text-neutral-500">
+        <div class="grid grid-cols-[1.75rem_1fr_9rem_6rem_2rem] items-center gap-3 border-b border-neutral-800 px-4 py-2 text-xs font-medium text-neutral-500">
             {{-- Select-all: three states (none / some / all) driven entirely server-side --}}
             <button type="button" wire:click="toggleSelectAll" class="flex items-center justify-center" aria-label="{{ __('Select all') }}">
                 <span @class([
@@ -256,7 +256,7 @@
                 <div
                     wire:key="dir-{{ $directory['path'] }}"
                     @class([
-                        'group grid grid-cols-[1.75rem_1fr_9rem_6rem_6rem] items-center gap-3 px-4 text-sm transition-colors',
+                        'group grid grid-cols-[1.75rem_1fr_9rem_6rem_2rem] items-center gap-3 px-4 text-sm transition-colors',
                         'bg-[#0A84FF]/10' => $isSelected,
                         'hover:bg-white/5' => ! $isSelected,
                     ])
@@ -292,11 +292,18 @@
                         <span class="text-right tabular-nums text-neutral-500">{{ trans_choice(':count item|:count items', $directory['count'], ['count' => $directory['count']]) }}</span>
                     </button>
 
-                    {{-- Inline actions: rename, move, delete kept visible side by side --}}
-                    <div class="flex items-center justify-end gap-0.5 opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
-                        <flux:button size="xs" variant="ghost" icon="pencil-square" wire:click="startRename('{{ $directory['path'] }}')" aria-label="{{ __('Rename') }}" />
-                        <flux:button size="xs" variant="ghost" icon="folder-arrow-down" wire:click="startMove('{{ $directory['path'] }}')" aria-label="{{ __('Move') }}" />
-                        <flux:button size="xs" variant="ghost" icon="trash" wire:click="confirmDelete('{{ $directory['path'] }}')" aria-label="{{ __('Delete') }}" />
+                    {{-- Row actions: rename, move, delete in a dropdown --}}
+                    <div class="flex items-center justify-end gap-0.5 opacity-0 transition group-hover:opacity-100 focus-within:opacity-100 has-data-open:opacity-100">
+                        <flux:dropdown position="bottom" align="end">
+                            <flux:button size="xs" variant="ghost" icon="ellipsis-vertical" aria-label="{{ __('Actions') }}" />
+
+                            <flux:menu class="macos-menu">
+                                <flux:menu.item icon="pencil-square" wire:click="startRename('{{ $directory['path'] }}')">{{ __('Rename') }}</flux:menu.item>
+                                <flux:menu.item icon="folder-arrow-down" wire:click="startMove('{{ $directory['path'] }}')">{{ __('Move') }}</flux:menu.item>
+                                <flux:menu.separator />
+                                <flux:menu.item icon="trash" variant="danger" wire:click="confirmDelete('{{ $directory['path'] }}')">{{ __('Delete') }}</flux:menu.item>
+                            </flux:menu>
+                        </flux:dropdown>
                     </div>
                 </div>
             @endforeach
@@ -307,7 +314,7 @@
                 <div
                     wire:key="file-{{ $file['path'] }}"
                     @class([
-                        'group grid grid-cols-[1.75rem_1fr_9rem_6rem_6rem] items-center gap-3 px-4 text-sm transition-colors',
+                        'group grid grid-cols-[1.75rem_1fr_9rem_6rem_2rem] items-center gap-3 px-4 text-sm transition-colors',
                         'bg-[#0A84FF]' => $isPlaying,
                         'bg-[#0A84FF]/10' => $isSelected && ! $isPlaying,
                         'hover:bg-white/5' => ! $isPlaying && ! $isSelected,
@@ -362,15 +369,22 @@
                         ])>{{ $file['size'] }}</span>
                     </button>
 
-                    {{-- Inline actions: rename, move, delete kept visible side by side --}}
+                    {{-- Row actions: rename, move, delete in a dropdown --}}
                     <div @class([
                         'flex items-center justify-end gap-0.5 transition',
                         'opacity-100' => $isPlaying,
-                        'opacity-0 group-hover:opacity-100 focus-within:opacity-100' => ! $isPlaying,
+                        'opacity-0 group-hover:opacity-100 focus-within:opacity-100 has-data-open:opacity-100' => ! $isPlaying,
                     ])>
-                        <flux:button size="xs" variant="ghost" icon="pencil-square" wire:click="startRename('{{ $file['path'] }}')" aria-label="{{ __('Rename') }}" @class(['text-white' => $isPlaying]) />
-                        <flux:button size="xs" variant="ghost" icon="folder-arrow-down" wire:click="startMove('{{ $file['path'] }}')" aria-label="{{ __('Move') }}" @class(['text-white' => $isPlaying]) />
-                        <flux:button size="xs" variant="ghost" icon="trash" wire:click="confirmDelete('{{ $file['path'] }}')" aria-label="{{ __('Delete') }}" @class(['text-white' => $isPlaying]) />
+                        <flux:dropdown position="bottom" align="end">
+                            <flux:button size="xs" variant="ghost" icon="ellipsis-vertical" aria-label="{{ __('Actions') }}" @class(['text-white' => $isPlaying]) />
+
+                            <flux:menu class="macos-menu">
+                                <flux:menu.item icon="pencil-square" wire:click="startRename('{{ $file['path'] }}')">{{ __('Rename') }}</flux:menu.item>
+                                <flux:menu.item icon="folder-arrow-down" wire:click="startMove('{{ $file['path'] }}')">{{ __('Move') }}</flux:menu.item>
+                                <flux:menu.separator />
+                                <flux:menu.item icon="trash" variant="danger" wire:click="confirmDelete('{{ $file['path'] }}')">{{ __('Delete') }}</flux:menu.item>
+                            </flux:menu>
+                        </flux:dropdown>
                     </div>
                 </div>
             @endforeach
