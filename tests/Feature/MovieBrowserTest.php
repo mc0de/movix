@@ -176,17 +176,14 @@ test('deleting the playing file stops playback', function () {
         ->assertSet('playing', null);
 });
 
-test('playing a file keeps the current folder so back returns to it', function () {
+test('stopping playback closes the player and stays in the current folder', function () {
     Storage::disk('movies')->put('Season 1/movie.mp4', 'data');
 
     Livewire::test(MovieBrowser::class)
         ->call('open', 'Season 1')
         ->call('play', 'Season 1/movie.mp4')
-        ->assertSet('path', 'Season 1')
         ->assertSet('playing', 'Season 1/movie.mp4')
-        // The back button pops the playback history entry, clearing `playing`
-        // while leaving the folder in place.
-        ->set('playing', null)
+        ->call('stopPlaying')
         ->assertSet('path', 'Season 1')
         ->assertSet('playing', null);
 });
