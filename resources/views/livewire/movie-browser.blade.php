@@ -23,6 +23,8 @@
             playing: $wire.entangle('playing'),
             positions: JSON.parse(localStorage.getItem('movix.positions') || '{}'),
             saveTimer: null,
+            speeds: [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2],
+            speed: Number(localStorage.getItem('movix.speed')) || 1,
             get url() {
                 return this.playing
                     ? '{{ url('movies') }}/' + this.playing.split('/').map(encodeURIComponent).join('/')
@@ -56,6 +58,22 @@
                 this.saveTimer = setInterval(() => this.savePosition(), 5000);
             },
             stopSaving() { clearInterval(this.saveTimer); this.saveTimer = null; },
+            applySpeed() {
+                // Loading a new source resets playbackRate to defaultPlaybackRate, so set both.
+                if (! this.$refs.video) { return; }
+                this.$refs.video.defaultPlaybackRate = this.speed;
+                this.$refs.video.playbackRate = this.speed;
+            },
+            setSpeed(speed) {
+                this.speed = speed;
+                localStorage.setItem('movix.speed', speed);
+                this.applySpeed();
+            },
+            stepSpeed(direction) {
+                const next = this.speeds[this.speeds.indexOf(this.speed) + direction];
+                if (next) { this.setSpeed(next); }
+            },
+            speedLabel(speed) { return speed === 1 ? '{{ __('Normal') }}' : speed + '×'; },
             toggleFullscreen() {
                 if (document.fullscreenElement) { document.exitFullscreen(); }
                 else { this.$refs.video?.requestFullscreen(); }
@@ -64,6 +82,8 @@
                 if (! this.playing) { return; }
                 if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) { return; }
                 if (e.key === 'f' || e.key === 'F') { this.toggleFullscreen(); }
+                if (e.key === '>') { this.stepSpeed(1); }
+                if (e.key === '<') { this.stepSpeed(-1); }
                 if (e.key === 'Escape' && ! document.fullscreenElement) { this.close(); }
             },
             close() {
@@ -90,7 +110,8 @@
                 controls
                 playsinline
                 preload="metadata"
-                x-on:loadedmetadata="restorePosition()"
+                x-on:loadedmetadata="restorePosition(); applySpeed()"
+                x-on:ratechange="if ($event.target.playbackRate !== speed && speeds.includes($event.target.playbackRate)) { setSpeed($event.target.playbackRate) }"
                 x-on:play="startSaving()"
                 x-on:pause="savePosition(); stopSaving()"
                 x-on:ended="savePosition(); stopSaving(); localStorage.removeItem('movix.playing')"
@@ -104,6 +125,23 @@
                 <span class="hidden shrink-0 text-xs text-neutral-500 sm:block">{{ $playing ? str($playing)->afterLast('.')->upper() : '' }}</span>
             </div>
             <div class="flex shrink-0 items-center gap-1">
+                <flux:dropdown position="top" align="end">
+                    <flux:button size="sm" variant="ghost" icon="play-circle" aria-label="{{ __('Playback speed') }}">
+                        <span class="tabular-nums" x-text="speed + '×'"></span>
+                    </flux:button>
+
+                    <flux:menu class="macos-menu">
+                        <flux:menu.heading>{{ __('Playback speed') }}</flux:menu.heading>
+                        <template x-for="option in speeds" :key="option">
+                            <flux:menu.item x-on:click="setSpeed(option)">
+                                <x-slot:icon>
+                                    <flux:icon.check variant="mini" class="me-2 size-4" x-bind:class="option === speed ? 'visible' : 'invisible'" data-flux-menu-item-icon />
+                                </x-slot:icon>
+                                <span class="tabular-nums" x-text="speedLabel(option)"></span>
+                            </flux:menu.item>
+                        </template>
+                    </flux:menu>
+                </flux:dropdown>
                 <flux:button size="sm" variant="ghost" icon="arrows-pointing-out" x-on:click="toggleFullscreen()">
                     <span class="hidden sm:inline">{{ __('Fullscreen') }}</span>
                     <flux:badge size="sm" class="ml-1">F</flux:badge>
