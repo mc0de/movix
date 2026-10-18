@@ -34,6 +34,7 @@ class User extends Authenticatable implements PasskeyUser
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory;
+
     use Notifiable;
     use PasskeyAuthenticatable;
     use TwoFactorAuthenticatable;
