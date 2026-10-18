@@ -301,7 +301,7 @@
                                 <flux:menu.item icon="pencil-square" wire:click="startRename('{{ $directory['path'] }}')">{{ __('Rename') }}</flux:menu.item>
                                 <flux:menu.item icon="folder-arrow-down" wire:click="startMove('{{ $directory['path'] }}')">{{ __('Move') }}</flux:menu.item>
                                 <flux:menu.separator />
-                                <flux:menu.item icon="trash" variant="danger" wire:click="confirmDelete('{{ $directory['path'] }}')">{{ __('Delete') }}</flux:menu.item>
+                                <flux:menu.item icon="trash" variant="danger" class="macos-menu-danger" wire:click="confirmDelete('{{ $directory['path'] }}')">{{ __('Delete') }}</flux:menu.item>
                             </flux:menu>
                         </flux:dropdown>
                     </div>
@@ -382,7 +382,7 @@
                                 <flux:menu.item icon="pencil-square" wire:click="startRename('{{ $file['path'] }}')">{{ __('Rename') }}</flux:menu.item>
                                 <flux:menu.item icon="folder-arrow-down" wire:click="startMove('{{ $file['path'] }}')">{{ __('Move') }}</flux:menu.item>
                                 <flux:menu.separator />
-                                <flux:menu.item icon="trash" variant="danger" wire:click="confirmDelete('{{ $file['path'] }}')">{{ __('Delete') }}</flux:menu.item>
+                                <flux:menu.item icon="trash" variant="danger" class="macos-menu-danger" wire:click="confirmDelete('{{ $file['path'] }}')">{{ __('Delete') }}</flux:menu.item>
                             </flux:menu>
                         </flux:dropdown>
                     </div>

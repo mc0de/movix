@@ -99,6 +99,14 @@ select:focus[data-flux-control] {
     @apply text-white;
 }
 
+.macos-menu [data-flux-menu-item].macos-menu-danger[data-active] {
+    @apply bg-[#FF3B30];
+}
+
+.dark .macos-menu [data-flux-menu-item].macos-menu-danger[data-active] {
+    @apply bg-[#FF453A];
+}
+
 .macos-menu [data-flux-menu-separator] {
     @apply mx-2 my-[5px];
 }
